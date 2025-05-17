@@ -1,0 +1,3026 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AI-Assisted Grading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="mb-4">Dashboard</h2>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Welcome to the AI-Assisted Grading System</h5>
+                <p class="card-text">
+                    This system helps educators automate the grading process for handwritten examination manuscripts.
+                    Use the navigation menu to access different features of the system.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="dashboard-stat">
+            <div class="icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="number">{{ stats.scanned_papers|default(0) }}</div>
+            <div class="label">Papers Scanned</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-stat">
+            <div class="icon">
+                <i class="fas fa-check-square"></i>
+            </div>
+            <div class="number">{{ stats.graded_papers|default(0) }}</div>
+            <div class="label">Papers Graded</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-stat">
+            <div class="icon">
+                <i class="fas fa-edit"></i>
+            </div>
+            <div class="number">{{ stats.question_papers|default(0) }}</div>
+            <div class="label">Question Papers</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-stat">
+            <div class="icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="number">{{ stats.time_saved|default('0h') }}</div>
+            <div class="label">Time Saved</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tasks"></i> Quick Actions
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="/ocr" class="list-group-item list-group-item-action">
+                        <i class="fas fa-file-upload"></i> Scan New Document
+                    </a>
+                    <a href="/generate-question" class="list-group-item list-group-item-action">
+                        <i class="fas fa-plus-circle"></i> Create New Question Paper
+                    </a>
+                    <a href="/batch-process" class="list-group-item list-group-item-action">
+                        <i class="fas fa-layer-group"></i> Batch Process Documents
+                    </a>
+                    <a href="/analytics" class="list-group-item list-group-item-action">
+                        <i class="fas fa-chart-line"></i> View Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-history"></i> Recent Activity
+            </div>
+            <div class="card-body">
+                {% if recent_activity %}
+                    <ul class="list-group">
+                        {% for activity in recent_activity %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ activity.description }}
+                                <span class="badge bg-primary rounded-pill">{{ activity.time }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No recent activity</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> System Overview
+            </div>
+            <div class="card-body">
+                <h5>AI-Assisted Grading and Evaluation System</h5>
+                <p>This system incorporates several modules working together to automate the examination grading process:</p>
+                <ul>
+                    <li><strong>OCR Module:</strong> Transforms handwritten responses into machine-readable digital text</li>
+                    <li><strong>Answer Mapping Module:</strong> Associates digitized answers with corresponding questions</li>
+                    <li><strong>Grading Module:</strong> Uses semantic AI and keyword matching to evaluate answers against reference content</li>
+                    <li><strong>RBT Evaluation:</strong> Aligns each response with Bloom's Revised Taxonomy cognitive levels</li>
+                    <li><strong>Feedback System:</strong> Provides transparent justifications for scores and improvement suggestions</li>
+                    <li><strong>Question Paper Generator:</strong> Automatically produces structured exam papers based on user-defined blueprints</li>
+                </ul>
+                <p>Start by using the OCR scan feature to digitize handwritten exam papers, or use the Question Generator to create new examination materials.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI-Assisted Grading System{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --accent-color: #e74c3c;
+            --text-color: #333;
+            --light-bg: #f8f9fa;
+            --dark-bg: #343a40;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            background-color: #f5f7fa;
+        }
+
+        .navbar {
+            background-color: var(--dark-bg);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: white;
+        }
+
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background-color: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            padding-top: 20px;
+        }
+
+        .sidebar .nav-link {
+            color: var(--text-color);
+            padding: 12px 20px;
+            margin-bottom: 5px;
+            border-radius: 0 30px 30px 0;
+            transition: all 0.3s;
+        }
+
+        .sidebar .nav-link:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+            padding-left: 25px;
+        }
+
+        .sidebar .nav-link.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .sidebar .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            border: none;
+        }
+
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            font-weight: bold;
+            border-radius: 10px 10px 0 0 !important;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-success {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+
+        .btn-danger {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+        }
+
+        .progress-bar-primary {
+            background-color: var(--primary-color);
+        }
+
+        .progress-bar-success {
+            background-color: var(--secondary-color);
+        }
+
+        .dashboard-stat {
+            padding: 20px;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-stat .icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+
+        .dashboard-stat .number {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .dashboard-stat .label {
+            color: #777;
+            font-size: 0.9rem;
+        }
+
+        .dropzone {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            background-color: #f9f9f9;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .dropzone:hover {
+            border-color: var(--primary-color);
+            background-color: #f2f8fd;
+        }
+
+        .dropzone i {
+            font-size: 3rem;
+            color: #ccc;
+            margin-bottom: 10px;
+        }
+
+        .dropzone.active {
+            border-color: var(--primary-color);
+            background-color: #e3f2fd;
+        }
+
+        /* Loading spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-graduation-cap"></i> AI-Assisted Grading System
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fas fa-question-circle"></i> Help
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fas fa-user-circle"></i> Profile
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/ocr' %}active{% endif %}" href="/ocr">
+                            <i class="fas fa-file-alt"></i> OCR Scan
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/map-answers' %}active{% endif %}" href="/map-answers">
+                            <i class="fas fa-map-signs"></i> Answer Mapping
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/grade' %}active{% endif %}" href="/grade">
+                            <i class="fas fa-check-square"></i> Grading
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/generate-question' %}active{% endif %}" href="/generate-question">
+                            <i class="fas fa-edit"></i> Question Generator
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/analytics' %}active{% endif %}" href="/analytics">
+                            <i class="fas fa-chart-bar"></i> Analytics
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/batch-process' %}active{% endif %}" href="/batch-process">
+                            <i class="fas fa-layer-group"></i> Batch Processing
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-10 content">
+                <div class="container-fluid">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Common JS -->
+    <script>
+        $(document).ready(function() {
+            // Dropdown initialization
+            $('.dropdown-toggle').dropdown();
+            
+            // Tooltips
+            $('[data-toggle="tooltip"]').tooltip();
+            
+            // Ensure proper sidebar height
+            function adjustSidebar() {
+                var windowHeight = $(window).height();
+                var navbarHeight = $('.navbar').outerHeight();
+                $('.sidebar').css('min-height', windowHeight - navbarHeight + 'px');
+            }
+            
+            adjustSidebar();
+            $(window).resize(adjustSidebar);
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+
+{% extends "base.html" %}
+
+{% block title %}Batch Processing - AI-Assisted Grading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="mb-4">Batch Processing</h2>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Process Multiple Submissions</h5>
+                <p class="card-text">
+                    Upload and process multiple exam papers at once to grade them against the same question paper.
+                    This feature is ideal for grading entire classes or comparison studies.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-file-upload"></i> Upload Submissions
+            </div>
+            <div class="card-body">
+                <form id="batch-upload-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <div class="dropzone" id="dropzone">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Drag and drop files here, or click to select files</p>
+                            <input type="file" id="file-upload" name="files[]" class="d-none" accept=".pdf,.png,.jpg,.jpeg" multiple>
+                        </div>
+                        <div class="mt-2 text-muted small">Supported formats: PDF, PNG, JPG, JPEG</div>
+                    </div>
+                    
+                    <div id="file-list" class="mb-3 d-none">
+                        <h6>Selected Files:</h6>
+                        <ul class="list-group" id="selected-files">
+                            <!-- Files will be listed here -->
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Question Paper</label>
+                        <select class="form-select" id="question-paper">
+                            <option value="generated" selected>Use Generated Question Paper</option>
+                            <option value="upload">Upload Different Question Paper</option>
+                        </select>
+                    </div>
+                    
+                    <div id="question-paper-upload" class="mb-3 d-none">
+                        <input type="file" class="form-control" id="question-paper-file" accept=".pdf,.docx,.txt">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary w-100" id="process-btn">
+                            <i class="fas fa-cogs"></i> Process Batch
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cog"></i> Processing Options
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">File Naming Convention</label>
+                    <select class="form-select" id="naming-convention">
+                        <option value="studentid" selected>Student ID in Filename</option>
+                        <option value="custom">Custom Pattern</option>
+                        <option value="none">No Specific Convention</option>
+                    </select>
+                </div>
+                
+                <div id="custom-pattern" class="mb-3 d-none">
+                    <label class="form-label">Custom Pattern</label>
+                    <input type="text" class="form-control" placeholder="E.g., {course}_{studentid}_{date}">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Processing Priority</label>
+                    <select class="form-select" id="processing-priority">
+                        <option value="speed">Speed (Faster, Lower Accuracy)</option>
+                        <option value="balanced" selected>Balanced</option>
+                        <option value="accuracy">Accuracy (Slower, Higher Accuracy)</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="enable-notifications" checked>
+                        <label class="form-check-label" for="enable-notifications">
+                            Notify when processing completes
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="auto-export" checked>
+                        <label class="form-check-label" for="auto-export">
+                            Automatically export results when done
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tasks"></i> Batch Processing Status
+                <div class="float-end">
+                    <button class="btn btn-sm btn-outline-primary" id="refresh-btn">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="status-container">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Upload and process files to see status information
+                    </div>
+                </div>
+                
+                <div id="processing-status" class="d-none">
+                    <div class="mb-4">
+                        <h6 class="mb-2">Overall Progress</h6>
+                        <div class="progress mb-2" style="height: 20px;">
+                            <div id="overall-progress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                        </div>
+                        <small id="status-text" class="text-muted">Preparing to process files...</small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-2">Files Status</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Filename</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="file-status-tbody">
+                                    <!-- File status rows will be added here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="processing-complete" class="d-none">
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> Batch processing completed successfully!
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-2">Class Summary</h6>
+                        <div class="row">
+                            <div class="col-md-3 text-center">
+                                <div class="stat-card p-3 rounded bg-light">
+                                    <h3 id="average-score">0%</h3>
+                                    <p class="mb-0">Class Average</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="stat-card p-3 rounded bg-light">
+                                    <h3 id="highest-score">0%</h3>
+                                    <p class="mb-0">Highest Score</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="stat-card p-3 rounded bg-light">
+                                    <h3 id="lowest-score">0%</h3>
+                                    <p class="mb-0">Lowest Score</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="stat-card p-3 rounded bg-light">
+                                    <h3 id="file-count">0</h3>
+                                    <p class="mb-0">Papers Processed</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-2">Score Distribution</h6>
+                        <div id="score-chart-container" style="height: 300px;">
+                            <!-- Chart will be rendered here -->
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-2">Results</h6>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Student ID</th>
+                                        <th>File</th>
+                                        <th>Total Score</th>
+                                        <th>Percentage</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-tbody">
+                                    <!-- Result rows will be added here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="btn-group">
+                            <button class="btn btn-primary" id="export-all-btn">
+                                <i class="fas fa-file-export"></i> Export All Results
+                            </button>
+                            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="visually-hidden">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" data-format="csv">Export as CSV</a></li>
+                                <li><a class="dropdown-item" href="#" data-format="excel">Export as Excel</a></li>
+                                <li><a class="dropdown-item" href="#" data-format="pdf">Export as PDF</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Toggle question paper upload
+        $('#question-paper').on('change', function() {
+            const selectedValue = $(this).val();
+            
+            if (selectedValue === 'upload') {
+                $('#question-paper-upload').removeClass('d-none');
+            } else {
+                $('#question-paper-upload').addClass('d-none');
+            }
+        });
+        
+        // Toggle custom pattern input
+        $('#naming-convention').on('change', function() {
+            const selectedValue = $(this).val();
+            
+            if (selectedValue === 'custom') {
+                $('#custom-pattern').removeClass('d-none');
+            } else {
+                $('#custom-pattern').addClass('d-none');
+            }
+        });
+        
+        // Dropzone functionality
+        const dropzone = $('#dropzone');
+        const fileUpload = $('#file-upload');
+        
+        dropzone.on('click', function() {
+            fileUpload.click();
+        });
+        
+        dropzone.on('dragover', function(e) {
+            e.preventDefault();
+            dropzone.addClass('active');
+        });
+        
+        dropzone.on('dragleave', function() {
+            dropzone.removeClass('active');
+        });
+        
+        dropzone.on('drop', function(e) {
+            e.preventDefault();
+            dropzone.removeClass('active');
+            
+            if (e.originalEvent.dataTransfer.files.length) {
+                fileUpload[0].files = e.originalEvent.dataTransfer.files;
+                updateFileList(fileUpload[0].files);
+            }
+        });
+        
+        fileUpload.on('change', function() {
+            if (fileUpload[0].files.length) {
+                updateFileList(fileUpload[0].files);
+            }
+        });
+        
+        // Update file list
+        function updateFileList(files) {
+            const fileList = $('#file-list');
+            const selectedFiles = $('#selected-files');
+            selectedFiles.empty();
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const fileItem = `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-file-alt me-2"></i>${file.name}</span>
+                        <span class="badge bg-primary rounded-pill">${formatFileSize(file.size)}</span>
+                    </li>
+                `;
+                
+                selectedFiles.append(fileItem);
+            }
+            
+            if (files.length > 0) {
+                fileList.removeClass('d-none');
+            } else {
+                fileList.addClass('d-none');
+            }
+        }
+        
+        // Format file size
+        function formatFileSize(bytes) {
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            if (bytes === 0) return '0 Byte';
+            const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+            return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+        }
+        
+        // Batch upload form submission
+        $('#batch-upload-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            if (!fileUpload[0].files.length) {
+                alert('Please select files to process.');
+                return;
+            }
+            
+            // Prepare for processing
+            $('#status-container').addClass('d-none');
+            $('#processing-status').removeClass('d-none');
+            $('#processing-complete').addClass('d-none');
+            
+            // Update file status table
+            const fileStatusTable = $('#file-status-tbody');
+            fileStatusTable.empty();
+            
+            for (let i = 0; i < fileUpload[0].files.length; i++) {
+                const file = fileUpload[0].files[i];
+                const fileRow = `
+                    <tr data-file="${file.name}">
+                        <td><small>${file.name}</small></td>
+                        <td><span class="badge bg-warning">Queued</span></td>
+                        <td class="text-end">-</td>
+                    </tr>
+                `;
+                
+                fileStatusTable.append(fileRow);
+            }
+            
+            // Disable form elements during processing
+            $('#process-btn').html('<i class="fas fa-spinner fa-spin"></i> Processing...').prop('disabled', true);
+            
+            // In a real app, this would call the backend with FormData
+            // For demo purposes, we'll simulate processing
+            simulateBatchProcessing(fileUpload[0].files);
+        });
+        
+        // Simulate batch processing
+        function simulateBatchProcessing(files) {
+            const totalFiles = files.length;
+            let processedFiles = 0;
+            
+            // Simulate processing each file with delays
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                // Update status to "Processing" after a delay
+                setTimeout(function() {
+                    $(`tr[data-file="${file.name}"] td:nth-child(2)`)
+                        .html('<span class="badge bg-info">Processing</span>');
+                    
+                    // Update progress bar
+                    updateProgress(processedFiles, totalFiles);
+                    $('#status-text').text(`Processing file ${processedFiles + 1} of ${totalFiles}...`);
+                    
+                }, i * 800);
+                
+                // Simulate completion after a further delay
+                setTimeout(function() {
+                    // Generate random score
+                    const score = Math.floor(Math.random() * 41) + 60; // 60-100
+                    
+                    // Update status to "Completed" with score
+                    $(`tr[data-file="${file.name}"] td:nth-child(2)`)
+                        .html('<span class="badge bg-success">Completed</span>');
+                    $(`tr[data-file="${file.name}"] td:nth-child(3)`)
+                        .text(`${score}%`);
+                    
+                    // Increment processed count
+                    processedFiles++;
+                    
+                    // Update progress bar
+                    updateProgress(processedFiles, totalFiles);
+                    $('#status-text').text(`Processed ${processedFiles} of ${totalFiles} files.`);
+                    
+                    // Check if all files are processed
+                    if (processedFiles === totalFiles) {
+                        completeProcessing(files);
+                    }
+                }, i * 800 + 1500);
+            }
+        }
+        
+        // Update progress bar
+        function updateProgress(processed, total) {
+            const percentage = Math.round((processed / total) * 100);
+            $('#overall-progress').css('width', `${percentage}%`).text(`${percentage}%`);
+        }
+        
+        // Complete processing
+        function completeProcessing(files) {
+            // Short delay for UX
+            setTimeout(function() {
+                // Hide processing status and show completion
+                $('#processing-status').addClass('d-none');
+                $('#processing-complete').removeClass('d-none');
+                
+                // Reset process button
+                $('#process-btn').html('<i class="fas fa-cogs"></i> Process Batch').prop('disabled', false);
+                
+                // Generate results data
+                const results = [];
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const score = parseInt($(`tr[data-file="${file.name}"] td:nth-child(3)`).text());
+                    
+                    // Extract student ID from filename (simplified for demo)
+                    const studentId = `S${1000 + i}`;
+                    
+                    results.push({
+                        studentId: studentId,
+                        filename: file.name,
+                        score: score,
+                        totalMarks: 100, // Simplified for demo
+                        percentage: score
+                    });
+                }
+                
+                // Calculate summary statistics
+                const scores = results.map(r => r.percentage);
+                const average = scores.reduce((a, b) => a + b, 0) / scores.length;
+                const highest = Math.max(...scores);
+                const lowest = Math.min(...scores);
+                
+                // Update summary stats
+                $('#average-score').text(`${average.toFixed(1)}%`);
+                $('#highest-score').text(`${highest}%`);
+                $('#lowest-score').text(`${lowest}%`);
+                $('#file-count').text(files.length);
+                
+                // Populate results table
+                const resultsTable = $('#results-tbody');
+                resultsTable.empty();
+                
+                for (const result of results) {
+                    let badgeClass = 'bg-danger';
+                    if (result.percentage >= 80) {
+                        badgeClass = 'bg-success';
+                    } else if (result.percentage >= 60) {
+                        badgeClass = 'bg-warning';
+                    }
+                    
+                    const resultRow = `
+                        <tr>
+                            <td>${result.studentId}</td>
+                            <td>${result.filename}</td>
+                            <td>${result.score} / ${result.totalMarks}</td>
+                            <td><span class="badge ${badgeClass}">${result.percentage}%</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary view-result-btn" data-student="${result.studentId}">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    
+                    resultsTable.append(resultRow);
+                }
+                
+                // Create chart (using a simplified approach for demo)
+                createScoreChart(scores);
+                
+            }, 1000);
+        }
+        
+        // Create score distribution chart
+        function createScoreChart(scores) {
+            // In a real app, this would use a proper charting library
+            // For demo purposes, we'll create a simple bar chart
+            
+            // Group scores into ranges
+            const ranges = {
+                '90-100': 0,
+                '80-89': 0,
+                '70-79': 0,
+                '60-69': 0,
+                '50-59': 0,
+                '< 50': 0
+            };
+            
+            for (const score of scores) {
+                if (score >= 90) ranges['90-100']++;
+                else if (score >= 80) ranges['80-89']++;
+                else if (score >= 70) ranges['70-79']++;
+                else if (score >= 60) ranges['60-69']++;
+                else if (score >= 50) ranges['50-59']++;
+                else ranges['< 50']++;
+            }
+            
+            // Create a simple bar chart using div elements
+            const chartContainer = $('#score-chart-container');
+            chartContainer.empty();
+            
+            const chart = `
+                <div class="d-flex align-items-end" style="height: 100%;">
+                    ${Object.entries(ranges).map(([range, count]) => {
+                        const percentage = (count / scores.length) * 100;
+                        let barColor = 'bg-success';
+                        
+                        if (range === '< 50' || range === '50-59') {
+                            barColor = 'bg-danger';
+                        } else if (range === '60-69') {
+                            barColor = 'bg-warning';
+                        }
+                        
+                        return `
+                            <div class="d-flex flex-column align-items-center mx-2" style="flex: 1;">
+                                <div class="small mb-1">${count} (${percentage.toFixed(1)}%)</div>
+                                <div class="${barColor}" style="width: 100%; height: ${percentage * 2}px; max-height: 200px;"></div>
+                                <div class="mt-2">${range}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            
+            chartContainer.append(chart);
+        }
+        
+        // View result button
+        $(document).on('click', '.view-result-btn', function() {
+            const studentId = $(this).data('student');
+            alert(`Viewing detailed results for student ${studentId}. In a full implementation, this would open a detailed view.`);
+        });
+        
+        // Export buttons
+        $('#export-all-btn').on('click', function() {
+            alert('Exporting all results as CSV. In a full implementation, this would download a CSV file.');
+        });
+        
+        $('.dropdown-item').on('click', function(e) {
+            e.preventDefault();
+            const format = $(this).data('format');
+            alert(`Exporting all results as ${format.toUpperCase()}. In a full implementation, this would download a ${format.toUpperCase()} file.`);
+        });
+        
+        // Refresh button
+        $('#refresh-btn').on('click', function() {
+            alert('In a real implementation, this would refresh the processing status from the server.');
+        });
+    });
+</script>
+{% endblock %}
+
+{% extends "base.html" %}
+
+{% block title %}Answer Mapping - AI-Assisted Grading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="mb-4">Answer Mapping</h2>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Associate Answers with Questions</h5>
+                <p class="card-text">
+                    Map extracted text to corresponding questions in the examination paper.
+                    This step ensures that each answer is correctly associated with its respective question.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-file-alt"></i> Extracted Text
+                <div class="float-end">
+                    <button class="btn btn-sm btn-outline-primary" id="reload-btn">
+                        <i class="fas fa-sync-alt"></i> Reload
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="ocr-result-container">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Scan a document first to see the extracted text.
+                    </div>
+                </div>
+                
+                <div id="ocr-text" class="d-none">
+                    <div class="border rounded p-3 bg-light" style="max-height: 500px; overflow-y: auto;">
+                        <pre id="extracted-text" class="mb-0" style="white-space: pre-wrap;"></pre>
+                    </div>
+                </div>
+                
+                <div id="no-text" class="alert alert-warning d-none">
+                    <i class="fas fa-exclamation-triangle"></i> No OCR text found. Please scan a document first.
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-question-circle"></i> Question Paper
+            </div>
+            <div class="card-body">
+                <div id="question-paper-container">
+                    <div class="mb-3">
+                        <label class="form-label">Select Question Paper Source</label>
+                        <select class="form-select" id="question-paper-source">
+                            <option value="generated" selected>Use Generated Question Paper</option>
+                            <option value="upload">Upload Question Paper</option>
+                            <option value="manual">Input Questions Manually</option>
+                        </select>
+                    </div>
+                    
+                    <div id="upload-container" class="d-none">
+                        <div class="mb-3">
+                            <input type="file" class="form-control" id="question-paper-file" accept=".pdf,.docx,.txt">
+                            <div class="form-text">Upload a question paper document (PDF, DOCX, or TXT)</div>
+                        </div>
+                    </div>
+                    
+                    <div id="manual-container" class="d-none">
+                        <div class="mb-3">
+                            <button class="btn btn-outline-primary" id="add-question-btn">
+                                <i class="fas fa-plus"></i> Add Question
+                            </button>
+                        </div>
+                        
+                        <div id="manual-questions">
+                            <!-- Questions will be added here -->
+                            <div class="question-input mb-3">
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text">Q1</span>
+                                    <input type="text" class="form-control" placeholder="Enter question text">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="generated-container">
+                        <div class="alert alert-info" id="generated-info">
+                            <i class="fas fa-info-circle"></i> Using the most recently generated question paper.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-map-signs"></i> Mapped Questions and Answers
+                <div class="float-end">
+                    <button class="btn btn-sm btn-outline-primary" id="auto-map-btn">
+                        <i class="fas fa-magic"></i> Auto-Map
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="mapping-container">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Click "Auto-Map" to start the mapping process, or manually map answers below.
+                    </div>
+                </div>
+                
+                <div id="mapped-items-container" class="d-none">
+                    <!-- Mapped items will be displayed here -->
+                </div>
+                
+                <div id="no-mapping" class="alert alert-warning d-none">
+                    <i class="fas fa-exclamation-triangle"></i> Unable to map answers. Please check the text extraction and question paper.
+                </div>
+                
+                <div class="mt-3 text-center d-none" id="next-steps">
+                    <button class="btn btn-primary" id="save-mapping-btn">
+                        <i class="fas fa-save"></i> Save Mapping
+                    </button>
+                    <a href="/grade" class="btn btn-success">
+                        <i class="fas fa-arrow-right"></i> Proceed to Grading
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-cog"></i> Mapping Options
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Question Detection Method</label>
+                    <select class="form-select" id="detection-method">
+                        <option value="pattern" selected>Pattern Recognition</option>
+                        <option value="spatial">Spatial Layout Analysis</option>
+                        <option value="semantic">Semantic Text Grouping</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Answer Boundary Detection</label>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="use-line-breaks" checked>
+                        <label class="form-check-label" for="use-line-breaks">
+                            Use line breaks as answer boundaries
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="use-keywords" checked>
+                        <label class="form-check-label" for="use-keywords">
+                            Detect keywords like "Ans:" or "Answer:"
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="use-paragraphs" checked>
+                        <label class="form-check-label" for="use-paragraphs">
+                            Treat paragraphs as separate answers
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Confidence Threshold</label>
+                    <input type="range" class="form-range" min="1" max="5" value="3" id="confidence-slider">
+                    <div class="d-flex justify-content-between">
+                        <small>More matches<br>(lower confidence)</small>
+                        <small>Balanced</small>
+                        <small>Fewer matches<br>(higher confidence)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Toggle question paper source containers
+        $('#question-paper-source').on('change', function() {
+            const selectedSource = $(this).val();
+            
+            $('#upload-container, #manual-container, #generated-container').addClass('d-none');
+            
+            if (selectedSource === 'upload') {
+                $('#upload-container').removeClass('d-none');
+            } else if (selectedSource === 'manual') {
+                $('#manual-container').removeClass('d-none');
+            } else {
+                $('#generated-container').removeClass('d-none');
+            }
+        });
+        
+        // Reload OCR results
+        $('#reload-btn').on('click', function() {
+            loadOcrResults();
+        });
+        
+        // Add question button for manual input
+        $('#add-question-btn').on('click', function() {
+            const questionCount = $('#manual-questions .question-input').length;
+            const newQuestion = `
+                <div class="question-input mb-3">
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">Q${questionCount + 1}</span>
+                        <input type="text" class="form-control" placeholder="Enter question text">
+                        <button class="btn btn-outline-danger remove-question-btn" type="button">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            $('#manual-questions').append(newQuestion);
+        });
+        
+        // Remove question button for manual input
+        $(document).on('click', '.remove-question-btn', function() {
+            $(this).closest('.question-input').remove();
+            
+            // Renumber remaining questions
+            $('#manual-questions .question-input').each(function(index) {
+                $(this).find('.input-group-text').text(`Q${index + 1}`);
+            });
+        });
+        
+        // Auto-map button
+        $('#auto-map-btn').on('click', function() {
+            // Show loading indicator
+            $(this).html('<i class="fas fa-spinner fa-spin"></i> Mapping...').prop('disabled', true);
+            
+            // Get OCR text
+            const ocrText = $('#extracted-text').text();
+            
+            if (!ocrText) {
+                alert('No OCR text found. Please scan a document first.');
+                $(this).html('<i class="fas fa-magic"></i> Auto-Map').prop('disabled', false);
+                return;
+            }
+            
+            // Get questions based on selected source
+            let questions = {};
+            const selectedSource = $('#question-paper-source').val();
+            
+            if (selectedSource === 'manual') {
+                // Get questions from manual input
+                $('#manual-questions .question-input').each(function(index) {
+                    const questionText = $(this).find('input').val();
+                    questions[index + 1] = questionText;
+                });
+            } else if (selectedSource === 'upload') {
+                // For demo purposes, we'll use dummy questions
+                // In a real app, this would parse the uploaded file
+                questions = {
+                    1: 'Define artificial intelligence.',
+                    2: 'Explain how machine learning differs from traditional programming.',
+                    3: 'Demonstrate how to normalize a dataset with examples.'
+                };
+            } else {
+                // For demo purposes, we'll use dummy questions from a "generated" paper
+                // In a real app, this would retrieve from session storage
+                questions = {
+                    1: 'Define artificial intelligence.',
+                    2: 'Explain how machine learning differs from traditional programming.',
+                    3: 'Demonstrate how to normalize a dataset with examples.',
+                    4: 'Analyze the strengths and weaknesses of neural networks for image recognition.',
+                    5: 'Evaluate the ethical implications of using facial recognition in public spaces.'
+                };
+            }
+            
+            // In a real app, this would call the backend
+            // For demo purposes, we'll simulate the mapping process
+            setTimeout(function() {
+                // Reset button
+                $('#auto-map-btn').html('<i class="fas fa-magic"></i> Auto-Map').prop('disabled', false);
+                
+                // Simulate mapping
+                const mappedItems = simulateMapping(ocrText, questions);
+                
+                if (mappedItems && Object.keys(mappedItems).length > 0) {
+                    displayMappedItems(mappedItems);
+                    
+                    // Store in session (simulated)
+                    sessionStorage.setItem('mapped_answers', JSON.stringify(mappedItems));
+                    
+                    // Show next steps
+                    $('#next-steps').removeClass('d-none');
+                } else {
+                    $('#mapping-container').addClass('d-none');
+                    $('#mapped-items-container').addClass('d-none');
+                    $('#no-mapping').removeClass('d-none');
+                }
+            }, 1500);
+        });
+        
+        // Save mapping button
+        $('#save-mapping-btn').on('click', function() {
+            // Show loading indicator
+            $(this).html('<i class="fas fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
+            
+            // In a real app, this would call the backend
+            // For demo purposes, we'll simulate the process
+            setTimeout(function() {
+                // Reset button
+                $('#save-mapping-btn').html('<i class="fas fa-save"></i> Save Mapping').prop('disabled', false);
+                
+                // Show success message
+                alert('Mapping saved successfully!');
+            }, 1000);
+        });
+        
+        // Load OCR results
+        function loadOcrResults() {
+            // In a real app, this would call the backend
+            // For demo purposes, we'll retrieve from localStorage or use dummy data
+            const ocrResult = localStorage.getItem('ocr_result');
+            
+            if (ocrResult) {
+                try {
+                    const result = JSON.parse(ocrResult);
+                    displayOcrResult(result.full_text || 'No text found');
+                } catch (e) {
+                    displayOcrResult('Error parsing OCR result');
+                }
+            } else {
+                // Use dummy data for demo
+                const dummyText = `
+Q1. Define artificial intelligence.
+Artificial Intelligence refers to the simulation of human intelligence in machines that are programmed to think and learn like humans. It involves creating systems capable of performing tasks that typically require human intelligence.
+
+Q2. Explain how machine learning differs from traditional programming.
+In traditional programming, developers write explicit rules for the computer to follow, whereas in machine learning, algorithms learn patterns from data to make decisions without being explicitly programmed. Machine learning uses statistical techniques to enable computers to improve their performance over time as they are exposed to more data.
+
+Q3. Demonstrate how to normalize a dataset with examples.
+To normalize a dataset, you calculate (x - min)/(max - min) for each value. For example, with values [10, 20, 30], min=10, max=30, normalized values would be [0, 0.5, 1]. This ensures all values are scaled between 0 and 1, which helps when features have different scales.
+
+Q4. Analyze the strengths and weaknesses of neural networks for image recognition.
+Strengths: High accuracy, ability to learn complex patterns, automatic feature extraction. Weaknesses: Requires large amounts of data, computationally expensive, black-box nature makes interpretability difficult, and susceptibility to adversarial examples.
+                `;
+                
+                displayOcrResult(dummyText);
+            }
+        }
+        
+        // Display OCR result
+        function displayOcrResult(text) {
+            if (text) {
+                $('#ocr-result-container').addClass('d-none');
+                $('#no-text').addClass('d-none');
+                $('#ocr-text').removeClass('d-none');
+                $('#extracted-text').text(text);
+            } else {
+                $('#ocr-result-container').addClass('d-none');
+                $('#ocr-text').addClass('d-none');
+                $('#no-text').removeClass('d-none');
+            }
+        }
+        
+        // Simulate mapping answers to questions
+        function simulateMapping(text, questions) {
+            // In a real app, this would use more sophisticated algorithms
+            // For demo purposes, we'll use a simple pattern matching approach
+            const mappedItems = {};
+            
+            // Split text by question pattern
+            const questionPattern = /Q(\d+)[\.:]?\s+/g;
+            const matches = text.split(questionPattern);
+            
+            // Skip first element if it's empty
+            const startIndex = matches[0].trim() ? 0 : 1;
+            
+            for (let i = startIndex + 1; i < matches.length; i += 2) {
+                const questionNum = parseInt(matches[i-1+startIndex]);
+                const answerText = matches[i+startIndex].trim();
+                
+                if (questionNum && answerText && questions[questionNum]) {
+                    mappedItems[questionNum] = {
+                        question: questions[questionNum],
+                        answer: answerText
+                    };
+                }
+            }
+            
+            return mappedItems;
+        }
+        
+        // Display mapped items
+        function displayMappedItems(mappedItems) {
+            const container = $('#mapped-items-container');
+            container.empty();
+            
+            for (const [qNum, qaData] of Object.entries(mappedItems)) {
+                const mappedItem = `
+                    <div class="mapped-item mb-3" data-question="${qNum}">
+                        <div class="card">
+                            <div class="card-header py-2 px-3 bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Question ${qNum}</strong></span>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary edit-mapping-btn">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body py-2 px-3">
+                                <div class="mb-2">
+                                    <strong>Question:</strong>
+                                    <p class="mb-0 question-text">${qaData.question}</p>
+                                </div>
+                                <div>
+                                    <strong>Answer:</strong>
+                                    <p class="mb-0 answer-text">${qaData.answer}</p>
+                                </div>
+                            </div>
+                            <div class="card-footer py-2 px-3 d-none edit-panel">
+                                <div class="mb-2">
+                                    <label class="form-label">Edit Answer:</label>
+                                    <textarea class="form-control edit-answer" rows="3">${qaData.answer}</textarea>
+                                </div>
+                                <div class="text-end">
+                                    <button class="btn btn-sm btn-secondary cancel-edit-btn">Cancel</button>
+                                    <button class="btn btn-sm btn-primary save-edit-btn">Save</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.append(mappedItem);
+            }
+            
+            // Show mapped items
+            $('#mapping-container').addClass('d-none');
+            $('#no-mapping').addClass('d-none');
+            $('#mapped-items-container').removeClass('d-none');
+            
+            // Set up edit buttons
+            $('.edit-mapping-btn').on('click', function() {
+                const card = $(this).closest('.card');
+                card.find('.edit-panel').removeClass('d-none');
+            });
+            
+            // Cancel edit button
+            $('.cancel-edit-btn').on('click', function() {
+                const card = $(this).closest('.card');
+                card.find('.edit-panel').addClass('d-none');
+            });
+            
+            // Save edit button
+            $('.save-edit-btn').on('click', function() {
+                const card = $(this).closest('.card');
+                const newAnswer = card.find('.edit-answer').val();
+                card.find('.answer-text').text(newAnswer);
+                card.find('.edit-panel').addClass('d-none');
+                
+                // Update session storage with new mapping
+                const mappedItems = JSON.parse(sessionStorage.getItem('mapped_answers') || '{}');
+                const questionNum = card.closest('.mapped-item').data('question');
+                
+                if (mappedItems[questionNum]) {
+                    mappedItems[questionNum].answer = newAnswer;
+                    sessionStorage.setItem('mapped_answers', JSON.stringify(mappedItems));
+                }
+            });
+        }
+        
+        // Initialize
+        loadOcrResults();
+    });
+</script>
+{% endblock %}
+
+{% extends "base.html" %}
+
+{% block title %}Analytics - AI-Assisted Grading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="mb-4">Grading Analytics</h2>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Performance Analysis</h5>
+                <p class="card-text">
+                    Visualize and analyze grading results with detailed metrics and cognitive level breakdowns.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if not has_data %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> No grading data available. Please grade answers before viewing analytics.
+        </div>
+        <div class="text-center mt-4">
+            <a href="/grade" class="btn btn-primary">
+                <i class="fas fa-arrow-left"></i> Go to Grading
+            </a>
+        </div>
+    </div>
+</div>
+{% else %}
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-bar"></i> Score Distribution by Question
+            </div>
+            <div class="card-body">
+                <img src="data:image/png;base64,{{ score_chart }}" class="img-fluid" alt="Score Distribution Chart">
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-brain"></i> Performance by Cognitive Level
+            </div>
+            <div class="card-body">
+                <img src="data:image/png;base64,{{ level_chart }}" class="img-fluid" alt="Cognitive Level Performance Chart">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-pie"></i> Performance Summary
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        <div class="stat-card p-3 rounded bg-light">
+                            <h3>{{ stats.total_score|round(1) }}</h3>
+                            <p class="mb-0">Total Score</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="stat-card p-3 rounded bg-light">
+                            <h3>{{ stats.max_possible|round(1) }}</h3>
+                            <p class="mb-0">Maximum Possible</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="stat-card p-3 rounded bg-light">
+                            <h3>{{ stats.average_percentage|round(1) }}%</h3>
+                            <p class="mb-0">Overall Percentage</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="stat-card p-3 rounded bg-light">
+                            <h3>{{ stats.question_count }}</h3>
+                            <p class="mb-0">Questions Evaluated</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-md-6 offset-md-3">
+                        <div class="progress mt-3" style="height: 30px;">
+                            {% if stats.average_percentage >= 80 %}
+                                {% set progress_class = "bg-success" %}
+                            {% elif stats.average_percentage >= 60 %}
+                                {% set progress_class = "bg-warning" %}
+                            {% else %}
+                                {% set progress_class = "bg-danger" %}
+                            {% endif %}
+                            
+                            <div class="progress-bar {{ progress_class }}" role="progressbar" 
+                                 style="width: {{ stats.average_percentage }}%;" 
+                                 aria-valuenow="{{ stats.average_percentage }}" 
+                                 aria-valuemin="0" aria-valuemax="100">
+                                {{ stats.average_percentage|round(1) }}%
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-2">
+                            <small>0%</small>
+                            <small>50%</small>
+                            <small>100%</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-list-alt"></i> Detailed Results</span>
+                    <div>
+                        <a href="/export-results?format=csv" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-file-csv"></i> Export CSV
+                        </a>
+                        <a href="/export-results?format=json" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-file-code"></i> Export JSON
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Question</th>
+                                <th>Score</th>
+                                <th>Max</th>
+                                <th>Percentage</th>
+                                <th>Cognitive Level</th>
+                                <th>Feedback</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for q_num, result in results.items() %}
+                            <tr>
+                                <td>Q{{ q_num }}</td>
+                                <td>{{ result.score }}</td>
+                                <td>{{ result.max_score }}</td>
+                                <td>
+                                    {% if result.percentage >= 80 %}
+                                        <span class="badge bg-success">{{ result.percentage|round(1) }}%</span>
+                                    {% elif result.percentage >= 60 %}
+                                        <span class="badge bg-warning">{{ result.percentage|round(1) }}%</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">{{ result.percentage|round(1) }}%</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if result.cognitive_level == 'remember' %}
+                                        <span class="badge bg-info">Remember</span>
+                                    {% elif result.cognitive_level == 'understand' %}
+                                        <span class="badge bg-success">Understand</span>
+                                    {% elif result.cognitive_level == 'apply' %}
+                                        <span class="badge bg-primary">Apply</span>
+                                    {% elif result.cognitive_level == 'analyze' %}
+                                        <span class="badge bg-warning">Analyze</span>
+                                    {% elif result.cognitive_level == 'evaluate' %}
+                                        <span class="badge bg-danger">Evaluate</span>
+                                    {% elif result.cognitive_level == 'create' %}
+                                        <span class="badge bg-dark">Create</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Unknown</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-secondary feedback-btn" data-bs-toggle="modal" data-bs-target="#feedbackModal" data-feedback="{{ result.feedback }}">
+                                        <i class="fas fa-comment-alt"></i> View
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Feedback Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="feedbackModalLabel">Detailed Feedback</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="feedback-content"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-lightbulb"></i> Recommendations
+            </div>
+            <div class="card-body">
+                <h6 class="mb-3">Areas for Improvement</h6>
+                
+                <ul class="recommendations-list">
+                    {% if stats.average_percentage < 70 %}
+                    <li>
+                        <strong>Overall Performance:</strong> The overall score suggests there's room for improvement. Consider revisiting core concepts and providing more detailed feedback.
+                    </li>
+                    {% endif %}
+                    
+                    {% set min_level = namespace(name='', score=100) %}
+                    {% for level, score in level_scores.items() if score < min_level.score %}
+                        {% set min_level.name = level %}
+                        {% set min_level.score = score %}
+                    {% endfor %}
+                    
+                    {% if min_level.name %}
+                    <li>
+                        <strong>Cognitive Level Focus:</strong> Performance in <span class="text-primary">{{ min_level.name|capitalize }}</span> level questions needs improvement. Consider additional practice with these types of questions.
+                    </li>
+                    {% endif %}
+                    
+                    {% if stats.question_count < 5 %}
+                    <li>
+                        <strong>Sample Size:</strong> The number of evaluated questions is relatively small. For more reliable analytics, consider including more questions in future assessments.
+                    </li>
+                    {% endif %}
+                </ul>
+                
+                <h6 class="mt-4 mb-3">Suggested Actions</h6>
+                
+                <ul class="action-list">
+                    <li>
+                        <strong>Review High-Scoring Areas:</strong> Analyze what worked well in high-scoring questions to reinforce effective learning strategies.
+                    </li>
+                    <li>
+                        <strong>Target Improvement Areas:</strong> Create focused practice exercises for lower-performing cognitive levels.
+                    </li>
+                    <li>
+                        <strong>Balanced Assessment Design:</strong> When generating future question papers, consider creating a more balanced distribution across cognitive levels.
+                    </li>
+                    <li>
+                        <strong>Comparative Analysis:</strong> Run batch processing on multiple submissions to compare performance across different students or groups.
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Set up feedback modal
+        $('.feedback-btn').on('click', function() {
+            const feedback = $(this).data('feedback');
+            $('#feedback-content').text(feedback);
+        });
+        
+        // Export button handling
+        $('.export-btn').on('click', function(e) {
+            e.preventDefault();
+            const format = $(this).data('format');
+            window.location.href = `/export-results?format=${format}`;
+        });
+    });
+</script>
+{% endblock %}
+
+{% extends "base.html" %}
+
+{% block title %}Grading - AI-Assisted Grading System{% endblock %}
+
+{% block content %}
+<!-- Content from previous template -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Toggle reference source containers
+        $('#reference-source').on('change', function() {
+            const selectedSource = $(this).val();
+            
+            $('#manual-reference-container, #textbook-reference-container').addClass('d-none');
+            
+            if (selectedSource === 'manual') {
+                $('#manual-reference-container').removeClass('d-none');
+            } else if (selectedSource === 'textbook') {
+                $('#textbook-reference-container').removeClass('d-none');
+            }
+        });
+        
+        // Load mapped answers
+        function loadMappedAnswers() {
+            $.ajax({
+                url: '/map-answers',
+                type: 'GET',
+                success: function(response) {
+                    if (response.mapped_answers && Object.keys(response.mapped_answers).length > 0) {
+                        displayMappedAnswers(response.mapped_answers);
+                    } else {
+                        $('#mapped-answers-container').addClass('d-none');
+                        $('#questions-list').addClass('d-none');
+                        $('#no-answers').removeClass('d-none');
+                    }
+                },
+                error: function() {
+                    $('#mapped-answers-container').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i> Error loading mapped answers
+                        </div>
+                    `);
+                }
+            });
+        }
+        
+        // Reload button event
+        $('#reload-btn').on('click', loadMappedAnswers);
+        
+        // Display mapped answers
+        function displayMappedAnswers(mappedAnswers) {
+            const questionsList = $('#questions-list');
+            questionsList.empty();
+            
+            let qIndex = 1;
+            for (const [qNum, qaData] of Object.entries(mappedAnswers)) {
+                const question = qaData.question || 'No question text available';
+                const answer = qaData.answer || 'No answer provided';
+                
+                const questionItem = `
+                    <div class="question-item mb-3" data-question="${qNum}">
+                        <div class="card">
+                            <div class="card-header py-2 px-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Q${qNum}:</strong> ${question.substring(0, 50)}${question.length > 50 ? '...' : ''}</span>
+                                    <div>
+                                        <span class="badge bg-secondary" id="grade-badge-${qNum}">Not Graded</span>
+                                        <button class="btn btn-sm btn-outline-primary ms-2 grade-question-btn" data-question="${qNum}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body py-2 px-3 d-none">
+                                <p class="mb-2"><strong>Question:</strong> ${question}</p>
+                                <p class="mb-0"><strong>Answer:</strong> ${answer}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                questionsList.append(questionItem);
+                qIndex++;
+            }
+            
+            // Show questions list
+            $('#mapped-answers-container').addClass('d-none');
+            $('#no-answers').addClass('d-none');
+            $('#questions-list').removeClass('d-none');
+            
+            // Toggle question details
+            $('.question-item .card-header').on('click', function() {
+                $(this).siblings('.card-body').toggleClass('d-none');
+            });
+            
+            // Grade question button event
+            $('.grade-question-btn').on('click', function(e) {
+                e.stopPropagation();
+                const questionNum = $(this).data('question');
+                loadQuestionForGrading(questionNum, mappedAnswers[questionNum]);
+            });
+        }
+        
+        // Load question for grading
+        function loadQuestionForGrading(questionNum, questionData) {
+            // Update grading panel with question data
+            $('#question-header').text(`Question ${questionNum}`);
+            $('#question-text').text(questionData.question || 'No question text available');
+            $('#student-answer').text(questionData.answer || 'No answer provided');
+            
+            // Try to get reference answer from generated paper if available
+            let referenceAnswer = '';
+            if ($('#reference-source').val() === 'generated') {
+                // This would be retrieved from the session in a real app
+                // For now, we'll just simulate it
+                $.ajax({
+                    url: '/generate-question',
+                    type: 'GET',
+                    success: function(response) {
+                        if (response.question_paper) {
+                            for (const section of response.question_paper.sections) {
+                                for (const question of section.questions) {
+                                    if (question.number == questionNum) {
+                                        referenceAnswer = question.answer || '';
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        $('#reference-answer').val(referenceAnswer);
+                    },
+                    error: function() {
+                        $('#reference-answer').val('');
+                    }
+                });
+            } else {
+                $('#reference-answer').val('');
+            }
+            
+            // Try to identify cognitive level from question text
+            const questionText = questionData.question || '';
+            let cognitiveLevel = 'understand'; // Default
+            
+            // Simple heuristic for demo purposes
+            const rememberKeywords = ['define', 'list', 'name', 'identify', 'recall'];
+            const understandKeywords = ['explain', 'describe', 'discuss', 'compare'];
+            const applyKeywords = ['apply', 'solve', 'calculate', 'demonstrate'];
+            const analyzeKeywords = ['analyze', 'differentiate', 'examine', 'compare', 'contrast'];
+            const evaluateKeywords = ['evaluate', 'justify', 'critique', 'assess'];
+            const createKeywords = ['create', 'design', 'develop', 'formulate', 'propose'];
+            
+            const keywordMap = {
+                'remember': rememberKeywords,
+                'understand': understandKeywords,
+                'apply': applyKeywords,
+                'analyze': analyzeKeywords,
+                'evaluate': evaluateKeywords,
+                'create': createKeywords
+            };
+            
+            for (const [level, keywords] of Object.entries(keywordMap)) {
+                for (const keyword of keywords) {
+                    if (questionText.toLowerCase().includes(keyword)) {
+                        cognitiveLevel = level;
+                        break;
+                    }
+                }
+            }
+            
+            $('#cognitive-level').val(cognitiveLevel);
+            
+            // Hide grading results and show grading panel
+            $('#grading-result').addClass('d-none');
+            $('#grading-container').addClass('d-none');
+            $('#grading-panel').removeClass('d-none');
+            
+            // Store current question number
+            $('#grade-btn').data('question', questionNum);
+        }
+        
+        // Grade answer button event
+        $('#grade-btn').on('click', function() {
+            const questionNum = $(this).data('question');
+            const studentAnswer = $('#student-answer').text();
+            const referenceAnswer = $('#reference-answer').val();
+            const cognitiveLevel = $('#cognitive-level').val();
+            const maxScore = $('#max-score').val();
+            
+            if (!referenceAnswer) {
+                alert('Please provide a reference answer for grading.');
+                return;
+            }
+            
+            // Prepare grading data
+            const gradingData = {
+                student_answer: studentAnswer,
+                reference_answer: referenceAnswer,
+                cognitive_level: cognitiveLevel,
+                max_score: maxScore,
+                question_num: questionNum,
+                config: {
+                    strictness: $('#strictness-slider').val(),
+                    keyword_matching: $('#keyword-matching').is(':checked'),
+                    partial_credit: $('#partial-credit').is(':checked'),
+                    detailed_feedback: $('#detailed-feedback').is(':checked')
+                }
+            };
+            
+            // Show loading indicator
+            $('#grade-btn').html('<i class="fas fa-spinner fa-spin"></i> Grading...').prop('disabled', true);
+            
+            // In a real app, this would call the backend
+            // For demo purposes, we'll simulate the grading process
+            setTimeout(function() {
+                // Reset button
+                $('#grade-btn').html('<i class="fas fa-check-circle"></i> Grade Answer').prop('disabled', false);
+                
+                // Simulate grading result
+                const similarity = Math.random() * 0.4 + 0.5; // Random between 0.5 and 0.9
+                const scorePercentage = similarity * 100;
+                const score = (similarity * maxScore).toFixed(1);
+                
+                // Update result display
+                $('#result-score').text(score);
+                $('#result-max-score').text(maxScore);
+                $('#result-progress').css('width', `${scorePercentage}%`).text(`${Math.round(scorePercentage)}%`);
+                
+                // Set appropriate color based on score percentage
+                let progressClass = 'bg-danger';
+                if (scorePercentage >= 80) {
+                    progressClass = 'bg-success';
+                } else if (scorePercentage >= 60) {
+                    progressClass = 'bg-warning';
+                } else if (scorePercentage >= 40) {
+                    progressClass = 'bg-danger';
+                }
+                
+                $('#result-progress').removeClass('bg-success bg-warning bg-danger')
+                                   .addClass(progressClass);
+                
+                // Update similarity display
+                $('#similarity-progress').css('width', `${similarity * 100}%`);
+                $('#similarity-text').text(`The answer has ${Math.round(similarity * 100)}% semantic similarity with the reference answer.`);
+                
+                // Generate feedback based on cognitive level and score
+                let feedback = '';
+                if (scorePercentage >= 80) {
+                    feedback = 'Excellent work! Your answer demonstrates a strong understanding of the concept.';
+                } else if (scorePercentage >= 60) {
+                    feedback = 'Good answer with most key points covered. Consider expanding on the details.';
+                } else if (scorePercentage >= 40) {
+                    feedback = 'Your answer addresses some aspects of the question, but needs improvement in depth and accuracy.';
+                } else {
+                    feedback = 'Your answer needs significant improvement. Please review the course material on this topic.';
+                }
+                
+                // Add cognitive level specific feedback
+                switch (cognitiveLevel) {
+                    case 'remember':
+                        feedback += ' Try to include more specific terminology and definitions in your answers.';
+                        break;
+                    case 'understand':
+                        feedback += ' Focus on demonstrating your understanding by explaining concepts in your own words.';
+                        break;
+                    case 'apply':
+                        feedback += ' Work on showing how to apply these concepts to solving problems or real-world situations.';
+                        break;
+                    case 'analyze':
+                        feedback += ' Develop your analytical skills by breaking down concepts into their components and examining relationships.';
+                        break;
+                    case 'evaluate':
+                        feedback += ' Strengthen your evaluative arguments by providing supporting evidence and considering multiple perspectives.';
+                        break;
+                    case 'create':
+                        feedback += ' Continue developing innovative approaches and integrating concepts in original ways.';
+                        break;
+                }
+                
+                $('#feedback-text').text(feedback);
+                
+                // Show grading result
+                $('#grading-result').removeClass('d-none');
+                
+                // Update question list badge
+                $(`#grade-badge-${questionNum}`).removeClass('bg-secondary').addClass('bg-success').text(`${score}/${maxScore}`);
+                
+                // Enable save results button
+                $('#save-grades-btn').prop('disabled', false);
+                
+                // Update grading summary
+                updateGradingSummary();
+            }, 1500);
+        });
+        
+        // Apply manual score override
+        $('#apply-override-btn').on('click', function() {
+            const overrideScore = $('#override-score').val();
+            const maxScore = $('#max-score').val();
+            const questionNum = $('#grade-btn').data('question');
+            
+            if (!overrideScore) {
+                alert('Please enter a score to override.');
+                return;
+            }
+            
+            if (parseFloat(overrideScore) > parseFloat(maxScore)) {
+                alert(`Override score cannot exceed maximum score (${maxScore}).`);
+                return;
+            }
+            
+            // Update display
+            $('#result-score').text(overrideScore);
+            const scorePercentage = (overrideScore / maxScore) * 100;
+            $('#result-progress').css('width', `${scorePercentage}%`).text(`${Math.round(scorePercentage)}%`);
+            
+            // Set appropriate color based on score percentage
+            let progressClass = 'bg-danger';
+            if (scorePercentage >= 80) {
+                progressClass = 'bg-success';
+            } else if (scorePercentage >= 60) {
+                progressClass = 'bg-warning';
+            } else if (scorePercentage >= 40) {
+                progressClass = 'bg-danger';
+            }
+            
+            $('#result-progress').removeClass('bg-success bg-warning bg-danger')
+                               .addClass(progressClass);
+            
+            // Update badge
+            $(`#grade-badge-${questionNum}`).removeClass('bg-secondary').addClass('bg-success').text(`${overrideScore}/${maxScore}`);
+            
+            // Clear override input
+            $('#override-score').val('');
+            
+            // Add note to feedback
+            const currentFeedback = $('#feedback-text').text();
+            $('#feedback-text').text(currentFeedback + ' [Score manually adjusted by grader]');
+            
+            // Update summary
+            updateGradingSummary();
+        });
+        
+        // Update grading summary
+        function updateGradingSummary() {
+            let totalScore = 0;
+            let maxPossible = 0;
+            let gradedCount = 0;
+            
+            // Collect scores from badges
+            $('.question-item').each(function() {
+                const badge = $(this).find('.badge');
+                
+                if (!badge.hasClass('bg-secondary')) {
+                    gradedCount++;
+                    const scoreText = badge.text();
+                    const scoreParts = scoreText.split('/');
+                    
+                    if (scoreParts.length === 2) {
+                        totalScore += parseFloat(scoreParts[0]);
+                        maxPossible += parseFloat(scoreParts[1]);
+                    }
+                }
+            });
+            
+            // Update summary display
+            $('#summary-total-score').text(totalScore.toFixed(1));
+            $('#summary-max-score').text(maxPossible.toFixed(1));
+            
+            const percentage = maxPossible > 0 ? (totalScore / maxPossible) * 100 : 0;
+            $('#summary-percentage').text(`${percentage.toFixed(1)}%`);
+            
+            const totalQuestions = $('.question-item').length;
+            $('#summary-questions').text(`${gradedCount}/${totalQuestions}`);
+            
+            // Show summary
+            $('#summary-container').addClass('d-none');
+            $('#grading-summary').removeClass('d-none');
+        }
+        
+        // Grade all button event
+        $('#grade-all-btn').on('click', function() {
+            if ($('#reference-source').val() === 'manual') {
+                alert('Manual reference mode requires you to grade each question individually.');
+                return;
+            }
+            
+            // Show loading indicator
+            $(this).html('<i class="fas fa-spinner fa-spin"></i> Processing...').prop('disabled', true);
+            
+            // In a real app, this would call the backend
+            // For demo purposes, we'll simulate the process
+            setTimeout(function() {
+                // Reset button
+                $('#grade-all-btn').html('<i class="fas fa-magic"></i> Grade All').prop('disabled', false);
+                
+                // Simulate grading all questions
+                $('.question-item').each(function() {
+                    const questionNum = $(this).data('question');
+                    const maxScore = 10; // Default max score
+                    
+                    // Generate random score between 5 and 10
+                    const score = (Math.random() * 5 + 5).toFixed(1);
+                    
+                    // Update badge
+                    $(`#grade-badge-${questionNum}`).removeClass('bg-secondary').addClass('bg-success').text(`${score}/${maxScore}`);
+                });
+                
+                // Update summary
+                updateGradingSummary();
+                
+                // Enable save button
+                $('#save-grades-btn').prop('disabled', false);
+                
+                // Show success message
+                alert('All questions have been graded successfully!');
+            }, 2000);
+        });
+        
+        // Save grades button event
+        $('#save-grades-btn').on('click', function() {
+            // Show loading indicator
+            $(this).html('<i class="fas fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
+            
+            // Collect grading results
+            const gradingResults = {};
+            $('.question-item').each(function() {
+                const questionNum = $(this).data('question');
+                const badge = $(this).find('.badge');
+                
+                if (!badge.hasClass('bg-secondary')) {
+                    const scoreText = badge.text();
+                    const scoreParts = scoreText.split('/');
+                    
+                    if (scoreParts.length === 2) {
+                        gradingResults[questionNum] = {
+                            score: parseFloat(scoreParts[0]),
+                            max_score: parseFloat(scoreParts[1]),
+                            percentage: (parseFloat(scoreParts[0]) / parseFloat(scoreParts[1])) * 100,
+                            cognitive_level: questionNum % 6 === 0 ? 'create' : 
+                                          questionNum % 5 === 0 ? 'evaluate' : 
+                                          questionNum % 4 === 0 ? 'analyze' : 
+                                          questionNum % 3 === 0 ? 'apply' : 
+                                          questionNum % 2 === 0 ? 'understand' : 'remember',
+                            feedback: `Feedback for question ${questionNum}`
+                        };
+                    }
+                }
+            });
+            
+            // In a real app, this would send the data to the server
+            // For demo purposes, we'll simulate the process
+            setTimeout(function() {
+                // Reset button
+                $('#save-grades-btn').html('<i class="fas fa-save"></i> Save Results').prop('disabled', false);
+                
+                // Store in session (simulated)
+                sessionStorage.setItem('grading_results', JSON.stringify(gradingResults));
+                
+                // Show success message
+                alert('Grading results have been saved successfully!');
+                
+                // Enable viewing analytics
+                $('#summary-container').addClass('d-none');
+                $('#grading-summary').removeClass('d-none');
+            }, 1500);
+        });
+        
+        // Initialize
+        loadMappedAnswers();
+    });
+</script>
+{% endblock %}
+
+{% extends "base.html" %}
+
+{% block title %}Question Generator - AI-Assisted Grading System{% endblock %}
+
+{% block content %}
+<!-- Content from previous part -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Initialize variables
+        let sectionCount = 2; // Start with 2 sections by default
+        
+        // Calculate total percentage for cognitive levels
+        function updatePercentageTotal(sectionElement) {
+            const inputs = $(sectionElement).find('.cognitive-level');
+            let total = 0;
+            
+            inputs.each(function() {
+                total += parseInt($(this).val()) || 0;
+            });
+            
+            const totalElement = $(sectionElement).find('.total-percentage');
+            const progressBar = $(sectionElement).find('.progress-bar');
+            
+            totalElement.text(`Total: ${total}%`);
+            
+            // Update progress bar
+            if (total === 100) {
+                progressBar.removeClass('bg-danger').addClass('bg-primary');
+            } else {
+                progressBar.removeClass('bg-primary').addClass('bg-danger');
+            }
+            
+            progressBar.css('width', `${Math.min(total, 100)}%`);
+            progressBar.attr('aria-valuenow', Math.min(total, 100));
+        }
+        
+        // Update cognitive level percentages when inputs change
+        $(document).on('input', '.cognitive-level', function() {
+            const sectionCard = $(this).closest('.section-card');
+            updatePercentageTotal(sectionCard);
+        });
+        
+        // Initialize percentages for all sections
+        $('.section-card').each(function() {
+            updatePercentageTotal(this);
+        });
+        
+        // Add new section
+        $('#add-section-btn').on('click', function() {
+            sectionCount++;
+            
+            const newSection = `
+                <div class="section-card mb-4" data-section="${sectionCount}">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Section ${sectionCount}</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-section">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Section Name</label>
+                                <input type="text" class="form-control section-name" placeholder="E.g., Section ${String.fromCharCode(64 + sectionCount)}" value="Section ${String.fromCharCode(64 + sectionCount)}">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <input type="text" class="form-control section-description" placeholder="E.g., Answer any questions">
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Number of Questions</label>
+                                    <input type="number" class="form-control question-count" value="3">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Marks per Question</label>
+                                    <input type="number" class="form-control marks-per-question" value="15">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Cognitive Levels Distribution</label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text">Remember</span>
+                                            <input type="number" class="form-control cognitive-level" data-level="remember" value="0" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text">Understand</span>
+                                            <input type="number" class="form-control cognitive-level" data-level="understand" value="0" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text">Apply</span>
+                                            <input type="number" class="form-control cognitive-level" data-level="apply" value="0" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text">Analyze</span>
+                                            <input type="number" class="form-control cognitive-level" data-level="analyze" value="30" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text">Evaluate</span>
+                                            <input type="number" class="form-control cognitive-level" data-level="evaluate" value="40" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text">Create</span>
+                                            <input type="number" class="form-control cognitive-level" data-level="create" value="30" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="progress mt-2" style="height: 5px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: 100%;" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <small class="text-muted total-percentage">Total: 100%</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('#sections-container').append(newSection);
+            updatePercentageTotal($('.section-card').last());
+        });
+        
+        // Remove section
+        $(document).on('click', '.remove-section', function() {
+            const sectionCard = $(this).closest('.section-card');
+            
+            // Don't remove if it's the last section
+            if ($('.section-card').length > 1) {
+                sectionCard.remove();
+                
+                // Renumber remaining sections
+                $('.section-card').each(function(index) {
+                    $(this).attr('data-section', index + 1);
+                    $(this).find('.card-header span').text(`Section ${index + 1}`);
+                });
+                
+                sectionCount = $('.section-card').length;
+            } else {
+                alert('You must have at least one section.');
+            }
+        });
+        
+        // Form submission
+        $('#blueprint-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            // Validate section percentages
+            let valid = true;
+            $('.section-card').each(function() {
+                const total = parseInt($(this).find('.total-percentage').text().replace('Total: ', '').replace('%', ''));
+                if (total !== 100) {
+                    valid = false;
+                    $(this).find('.card-header').addClass('bg-danger text-white');
+                    
+                    setTimeout(() => {
+                        $(this).find('.card-header').removeClass('bg-danger text-white');
+                    }, 2000);
+                }
+            });
+            
+            if (!valid) {
+                alert('Each section must have cognitive levels that total exactly 100%.');
+                return;
+            }
+            
+            // Collect form data
+            const subject = $('#subject').val() || 'Examination';
+            const totalMarks = $('#total-marks').val();
+            const timeHours = $('#time-hours').val();
+            
+            const sections = [];
+            $('.section-card').each(function() {
+                const sectionData = {
+                    name: $(this).find('.section-name').val(),
+                    description: $(this).find('.section-description').val(),
+                    question_count: parseInt($(this).find('.question-count').val()),
+                    marks_per_question: parseInt($(this).find('.marks-per-question').val()),
+                    cognitive_levels: {}
+                };
+                
+                // Get cognitive levels
+                $(this).find('.cognitive-level').each(function() {
+                    const level = $(this).data('level');
+                    const value = parseInt($(this).val()) / 100;
+                    if (value > 0) {
+                        sectionData.cognitive_levels[level] = value;
+                    }
+                });
+                
+                sections.push(sectionData);
+            });
+            
+            // Prepare data for API call
+            const formData = {
+                subject: subject,
+                total_marks: totalMarks,
+                time_hours: timeHours,
+                sections: sections
+            };
+            
+            // Show loader
+            $('#generate-btn').html('<i class="fas fa-spinner fa-spin"></i> Generating...').prop('disabled', true);
+            
+            // Send request to generate paper
+            $.ajax({
+                url: '/generate-question',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function(response) {
+                    // Reset button
+                    $('#generate-btn').html('<i class="fas fa-magic"></i> Generate Question Paper').prop('disabled', false);
+                    
+                    // Enable action buttons
+                    $('#print-btn, #export-btn').prop('disabled', false);
+                    
+                    // Display generated paper
+                    displayQuestionPaper(response.question_paper);
+                    
+                    // Show next steps
+                    $('#next-steps').removeClass('d-none');
+                },
+                error: function(xhr) {
+                    // Reset button
+                    $('#generate-btn').html('<i class="fas fa-magic"></i> Generate Question Paper').prop('disabled', false);
+                    
+                    // Show error
+                    alert('Error generating question paper: ' + 
+                          (xhr.responseJSON?.error || 'Unknown error occurred'));
+                }
+            });
+        });
+        
+        // Display generated question paper
+        function displayQuestionPaper(paper) {
+            // Update paper headers
+            $('#paper-title').text(paper.title);
+            $('#paper-date').text('Date: ' + paper.date);
+            $('#paper-details').text(`Total Marks: ${paper.total_marks} | Time: ${paper.time_hours} Hours`);
+            
+            // Clear sections
+            $('#paper-sections').empty();
+            
+            // Add sections
+            paper.sections.forEach(section => {
+                const sectionHTML = `
+                    <div class="paper-section mb-4">
+                        <h5 class="mb-2">${section.name}</h5>
+                        <p class="mb-3 text-muted fst-italic">${section.description}</p>
+                        
+                        <div class="questions">
+                            ${generateQuestionsHTML(section.questions)}
+                        </div>
+                    </div>
+                    <hr>
+                `;
+                
+                $('#paper-sections').append(sectionHTML);
+            });
+            
+            // Show question paper
+            $('#generated-paper-container').empty();
+            $('#question-paper').removeClass('d-none');
+            $('#generated-paper-container').append($('#question-paper'));
+        }
+        
+        // Generate HTML for questions
+        function generateQuestionsHTML(questions) {
+            let html = '';
+            
+            questions.forEach(question => {
+                const cognitiveClass = getCognitiveClass(question.cognitive_level);
+                
+                html += `
+                    <div class="question mb-3">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <span class="question-number fw-bold">${question.number}.</span>
+                                <span class="question-text">${question.text}</span>
+                            </div>
+                            <div>
+                                <span class="badge ${cognitiveClass} ms-2">${question.cognitive_level}</span>
+                                <span class="badge bg-secondary ms-2">${question.marks} marks</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            return html;
+        }
+        
+        // Get badge class for cognitive level
+        function getCognitiveClass(level) {
+            switch(level) {
+                case 'remember': return 'bg-info';
+                case 'understand': return 'bg-success';
+                case 'apply': return 'bg-primary';
+                case 'analyze': return 'bg-warning';
+                case 'evaluate': return 'bg-danger';
+                case 'create': return 'bg-dark';
+                default: return 'bg-secondary';
+            }
+        }
+        
+        // Print button functionality
+        $('#print-btn').on('click', function() {
+            const paperContent = $('#question-paper').html();
+            const printWindow = window.open('', '_blank');
+            
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${$('#paper-title').text()}</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+                    <style>
+                        body {
+                            padding: 20px;
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        }
+                        @media print {
+                            .no-print {
+                                display: none;
+                            }
+                            body {
+                                padding: 0;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="no-print text-end mb-3">
+                            <button class="btn btn-primary" onclick="window.print()">Print</button>
+                            <button class="btn btn-secondary ms-2" onclick="window.close()">Close</button>
+                        </div>
+                        ${paperContent}
+                    </div>
+                </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+        });
+        
+        // Export button functionality
+        $('#export-btn').on('click', function() {
+            // This would be more sophisticated in a real app with proper PDF generation
+            // For now, just offer a simple text export
+            
+            let exportText = `${$('#paper-title').text()}\n`;
+            exportText += `${$('#paper-date').text()}\n`;
+            exportText += `${$('#paper-details').text()}\n\n`;
+            
+            $('#paper-sections .paper-section').each(function() {
+                const sectionName = $(this).find('h5').text();
+                const sectionDesc = $(this).find('p').text();
+                
+                exportText += `${sectionName}\n`;
+                exportText += `${sectionDesc}\n\n`;
+                
+                $(this).find('.question').each(function() {
+                    const questionNum = $(this).find('.question-number').text();
+                    const questionText = $(this).find('.question-text').text();
+                    const marks = $(this).find('.badge.bg-secondary').text();
+                    
+                    exportText += `${questionNum} ${questionText} (${marks})\n`;
+                });
+                
+                exportText += '\n';
+            });
+            
+            // Create a blob and download link
+            const blob = new Blob([exportText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${$('#subject').val() || 'question_paper'}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    });
+</script>
+{% endblock %}
+
+{% extends "base.html" %}
+
+{% block title %}OCR Scan - AI-Assisted Grading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="mb-4">OCR Document Scanner</h2>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Scan Handwritten Examination Papers</h5>
+                <p class="card-text">
+                    Upload PDF or image files containing handwritten responses to digitize them. 
+                    The OCR engine will process and convert the handwriting to machine-readable text.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-file-upload"></i> Upload Document
+            </div>
+            <div class="card-body">
+                <form id="upload-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <div class="dropzone" id="dropzone">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Drag and drop files here, or click to select files</p>
+                            <input type="file" id="file-upload" name="file" class="d-none" accept=".pdf,.png,.jpg,.jpeg">
+                        </div>
+                        <div class="mt-2 text-muted small">Supported formats: PDF, PNG, JPG, JPEG</div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="detect-questions" name="detect_questions">
+                        <label class="form-check-label" for="detect-questions">
+                            Automatically detect questions and structure
+                        </label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary" id="scan-btn">
+                            <i class="fas fa-search"></i> Scan Document
+                        </button>
+                        <div class="loader" id="loader"></div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-cog"></i> Advanced Options
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="language-select" class="form-label">OCR Language</label>
+                    <select class="form-select" id="language-select">
+                        <option value="eng" selected>English</option>
+                        <option value="fra">French</option>
+                        <option value="deu">German</option>
+                        <option value="spa">Spanish</option>
+                        <option value="ita">Italian</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="quality-slider" class="form-label">Processing Quality</label>
+                    <input type="range" class="form-range" min="1" max="5" value="3" id="quality-slider">
+                    <div class="d-flex justify-content-between">
+                        <small>Faster</small>
+                        <small>Balanced</small>
+                        <small>Higher Quality</small>
+                    </div>
+                </div>
+                
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" value="" id="enhance-contrast">
+                    <label class="form-check-label" for="enhance-contrast">
+                        Enhance contrast for better recognition
+                    </label>
+                </div>
+                
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" value="" id="noise-reduction">
+                    <label class="form-check-label" for="noise-reduction">
+                        Apply noise reduction
+                    </label>
+                </div>
+                
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="deskew">
+                    <label class="form-check-label" for="deskew">
+                        Auto-deskew (straighten) document
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-file-alt"></i> OCR Results
+                <div class="float-end">
+                    <button class="btn btn-sm btn-outline-primary" id="copy-btn" disabled>
+                        <i class="fas fa-copy"></i> Copy
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" id="save-btn" disabled>
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="result-container">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Scan results will appear here
+                    </div>
+                </div>
+                
+                <!-- OCR Results will be displayed here -->
+                <div id="ocr-text" class="d-none">
+                    <h6 class="mb-3">Extracted Text:</h6>
+                    <div class="border rounded p-3 bg-light" style="max-height: 400px; overflow-y: auto;">
+                        <pre id="result-text" class="mb-0" style="white-space: pre-wrap;"></pre>
+                    </div>
+                </div>
+                
+                <!-- Detected Questions will be displayed here -->
+                <div id="questions-container" class="d-none mt-4">
+                    <h6 class="mb-3">Detected Questions:</h6>
+                    <div id="questions-list"></div>
+                </div>
+                
+                <div class="mt-3 text-center d-none" id="next-steps">
+                    <a href="/map-answers" class="btn btn-success">
+                        <i class="fas fa-arrow-right"></i> Proceed to Answer Mapping
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-image"></i> Document Preview
+            </div>
+            <div class="card-body text-center">
+                <div id="image-preview-container">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Document preview will appear here
+                    </div>
+                </div>
+                <img id="document-preview" class="img-fluid rounded border d-none" alt="Document Preview">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Dropzone functionality
+        const dropzone = $('#dropzone');
+        const fileUpload = $('#file-upload');
+        
+        dropzone.on('click', function() {
+            fileUpload.click();
+        });
+        
+        dropzone.on('dragover', function(e) {
+            e.preventDefault();
+            dropzone.addClass('active');
+        });
+        
+        dropzone.on('dragleave', function() {
+            dropzone.removeClass('active');
+        });
+        
+        dropzone.on('drop', function(e) {
+            e.preventDefault();
+            dropzone.removeClass('active');
+            
+            if (e.originalEvent.dataTransfer.files.length) {
+                fileUpload[0].files = e.originalEvent.dataTransfer.files;
+                updateFileInfo(fileUpload[0].files[0]);
+            }
+        });
+        
+        fileUpload.on('change', function() {
+            if (fileUpload[0].files.length) {
+                updateFileInfo(fileUpload[0].files[0]);
+            }
+        });
+        
+        function updateFileInfo(file) {
+            dropzone.html(`<i class="fas fa-file-alt"></i><p>${file.name} (${formatFileSize(file.size)})</p>`);
+            
+            // Display document preview if it's an image
+            if (file.type.match('image.*')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#image-preview-container').addClass('d-none');
+                    $('#document-preview').attr('src', e.target.result).removeClass('d-none');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // For PDFs, just show an icon
+                $('#image-preview-container').removeClass('d-none').html(
+                    `<i class="fas fa-file-pdf" style="font-size: 5rem; color: #e74c3c;"></i>
+                     <p class="mt-2">${file.name}</p>`
+                );
+                $('#document-preview').addClass('d-none');
+            }
+        }
+        
+        function formatFileSize(bytes) {
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            if (bytes === 0) return '0 Byte';
+            const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+            return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+        }
+        
+        // Form submission
+        $('#upload-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            if (!fileUpload[0].files.length) {
+                alert('Please select a file to scan.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileUpload[0].files[0]);
+            formData.append('detect_questions', $('#detect-questions').is(':checked'));
+            
+            // Add advanced options if needed
+            // These would be processed server-side to configure the OCR engine
+            
+            // Show loader
+            $('#loader').show();
+            $('#scan-btn').prop('disabled', true);
+            
+            $.ajax({
+                url: '/ocr',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    // Hide loader
+                    $('#loader').hide();
+                    $('#scan-btn').prop('disabled', false);
+                    
+                    // Update results
+                    $('#result-container').empty();
+                    $('#ocr-text').removeClass('d-none');
+                    $('#result-text').text(response.full_text || 'No text extracted');
+                    
+                    // Enable buttons
+                    $('#copy-btn, #save-btn').prop('disabled', false);
+                    
+                    // Show next steps
+                    $('#next-steps').removeClass('d-none');
+                    
+                    // Display detected questions if available
+                    if (response.questions && Object.keys(response.questions).length > 0) {
+                        displayQuestions(response.questions);
+                    } else {
+                        $('#questions-container').addClass('d-none');
+                    }
+                },
+                error: function(xhr) {
+                    // Hide loader
+                    $('#loader').hide();
+                    $('#scan-btn').prop('disabled', false);
+                    
+                    // Show error
+                    $('#result-container').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i> Error: ${xhr.responseJSON?.error || 'Failed to process document'}
+                        </div>
+                    `);
+                }
+            });
+        });
+        
+        function displayQuestions(questions) {
+            const questionsList = $('#questions-list');
+            questionsList.empty();
+            
+            for (const [qNum, qText] of Object.entries(questions)) {
+                questionsList.append(`
+                    <div class="card mb-2">
+                        <div class="card-header py-1 px-3">
+                            <strong>Question ${qNum}</strong>
+                        </div>
+                        <div class="card-body py-2 px-3">
+                            <p class="mb-0">${qText}</p>
+                        </div>
+                    </div>
+                `);
+            }
+            
+            $('#questions-container').removeClass('d-none');
+        }
+        
+        // Copy button functionality
+        $('#copy-btn').on('click', function() {
+            const textToCopy = $('#result-text').text();
+            
+            // Create a temporary textarea element to copy from
+            const textarea = document.createElement('textarea');
+            textarea.value = textToCopy;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            
+            // Show success message
+            const originalText = $(this).html();
+            $(this).html('<i class="fas fa-check"></i> Copied');
+            
+            setTimeout(() => {
+                $(this).html(originalText);
+            }, 2000);
+        });
+        
+        // Save button functionality
+        $('#save-btn').on('click', function() {
+            const textToSave = $('#result-text').text();
+            
+            // Create a blob and download link
+            const blob = new Blob([textToSave], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ocr_result.txt';
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    });
+</script>
+{% endblock %}
