@@ -1,0 +1,484 @@
+{% extends "base.html" %}
+
+{% block title %}Answer Mapping - AI-Assisted Grading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="mb-4">Answer Mapping</h2>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Associate Answers with Questions</h5>
+                <p class="card-text">
+                    Map extracted text to corresponding questions in the examination paper.
+                    This step ensures that each answer is correctly associated with its respective question.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-file-alt"></i> Extracted Text
+                <div class="float-end">
+                    <button class="btn btn-sm btn-outline-primary" id="reload-btn">
+                        <i class="fas fa-sync-alt"></i> Reload
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="ocr-result-container">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Scan a document first to see the extracted text.
+                    </div>
+                </div>
+                
+                <div id="ocr-text" class="d-none">
+                    <div class="border rounded p-3 bg-light" style="max-height: 500px; overflow-y: auto;">
+                        <pre id="extracted-text" class="mb-0" style="white-space: pre-wrap;"></pre>
+                    </div>
+                </div>
+                
+                <div id="no-text" class="alert alert-warning d-none">
+                    <i class="fas fa-exclamation-triangle"></i> No OCR text found. Please scan a document first.
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-question-circle"></i> Question Paper
+            </div>
+            <div class="card-body">
+                <div id="question-paper-container">
+                    <div class="mb-3">
+                        <label class="form-label">Select Question Paper Source</label>
+                        <select class="form-select" id="question-paper-source">
+                            <option value="generated" selected>Use Generated Question Paper</option>
+                            <option value="upload">Upload Question Paper</option>
+                            <option value="manual">Input Questions Manually</option>
+                        </select>
+                    </div>
+                    
+                    <div id="upload-container" class="d-none">
+                        <div class="mb-3">
+                            <input type="file" class="form-control" id="question-paper-file" accept=".pdf,.docx,.txt">
+                            <div class="form-text">Upload a question paper document (PDF, DOCX, or TXT)</div>
+                        </div>
+                    </div>
+                    
+                    <div id="manual-container" class="d-none">
+                        <div class="mb-3">
+                            <button class="btn btn-outline-primary" id="add-question-btn">
+                                <i class="fas fa-plus"></i> Add Question
+                            </button>
+                        </div>
+                        
+                        <div id="manual-questions">
+                            <!-- Questions will be added here -->
+                            <div class="question-input mb-3">
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text">Q1</span>
+                                    <input type="text" class="form-control" placeholder="Enter question text">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="generated-container">
+                        <div class="alert alert-info" id="generated-info">
+                            <i class="fas fa-info-circle"></i> Using the most recently generated question paper.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-map-signs"></i> Mapped Questions and Answers
+                <div class="float-end">
+                    <button class="btn btn-sm btn-outline-primary" id="auto-map-btn">
+                        <i class="fas fa-magic"></i> Auto-Map
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="mapping-container">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Click "Auto-Map" to start the mapping process, or manually map answers below.
+                    </div>
+                </div>
+                
+                <div id="mapped-items-container" class="d-none">
+                    <!-- Mapped items will be displayed here -->
+                </div>
+                
+                <div id="no-mapping" class="alert alert-warning d-none">
+                    <i class="fas fa-exclamation-triangle"></i> Unable to map answers. Please check the text extraction and question paper.
+                </div>
+                
+                <div class="mt-3 text-center d-none" id="next-steps">
+                    <button class="btn btn-primary" id="save-mapping-btn">
+                        <i class="fas fa-save"></i> Save Mapping
+                    </button>
+                    <a href="/grade" class="btn btn-success">
+                        <i class="fas fa-arrow-right"></i> Proceed to Grading
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-cog"></i> Mapping Options
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Question Detection Method</label>
+                    <select class="form-select" id="detection-method">
+                        <option value="pattern" selected>Pattern Recognition</option>
+                        <option value="spatial">Spatial Layout Analysis</option>
+                        <option value="semantic">Semantic Text Grouping</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Answer Boundary Detection</label>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="use-line-breaks" checked>
+                        <label class="form-check-label" for="use-line-breaks">
+                            Use line breaks as answer boundaries
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="use-keywords" checked>
+                        <label class="form-check-label" for="use-keywords">
+                            Detect keywords like "Ans:" or "Answer:"
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="use-paragraphs" checked>
+                        <label class="form-check-label" for="use-paragraphs">
+                            Treat paragraphs as separate answers
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Confidence Threshold</label>
+                    <input type="range" class="form-range" min="1" max="5" value="3" id="confidence-slider">
+                    <div class="d-flex justify-content-between">
+                        <small>More matches<br>(lower confidence)</small>
+                        <small>Balanced</small>
+                        <small>Fewer matches<br>(higher confidence)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Toggle question paper source containers
+        $('#question-paper-source').on('change', function() {
+            const selectedSource = $(this).val();
+            
+            $('#upload-container, #manual-container, #generated-container').addClass('d-none');
+            
+            if (selectedSource === 'upload') {
+                $('#upload-container').removeClass('d-none');
+            } else if (selectedSource === 'manual') {
+                $('#manual-container').removeClass('d-none');
+            } else {
+                $('#generated-container').removeClass('d-none');
+            }
+        });
+        
+        // Reload OCR results
+        $('#reload-btn').on('click', function() {
+            loadOcrResults();
+        });
+        
+        // Add question button for manual input
+        $('#add-question-btn').on('click', function() {
+            const questionCount = $('#manual-questions .question-input').length;
+            const newQuestion = `
+                <div class="question-input mb-3">
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">Q${questionCount + 1}</span>
+                        <input type="text" class="form-control" placeholder="Enter question text">
+                        <button class="btn btn-outline-danger remove-question-btn" type="button">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            $('#manual-questions').append(newQuestion);
+        });
+        
+        // Remove question button for manual input
+        $(document).on('click', '.remove-question-btn', function() {
+            $(this).closest('.question-input').remove();
+            
+            // Renumber remaining questions
+            $('#manual-questions .question-input').each(function(index) {
+                $(this).find('.input-group-text').text(`Q${index + 1}`);
+            });
+        });
+        
+        // Auto-map button
+        $('#auto-map-btn').on('click', function() {
+            // Show loading indicator
+            $(this).html('<i class="fas fa-spinner fa-spin"></i> Mapping...').prop('disabled', true);
+            
+            // Get OCR text
+            const ocrText = $('#extracted-text').text();
+            
+            if (!ocrText) {
+                alert('No OCR text found. Please scan a document first.');
+                $(this).html('<i class="fas fa-magic"></i> Auto-Map').prop('disabled', false);
+                return;
+            }
+            
+            // Get questions based on selected source
+            let questions = {};
+            const selectedSource = $('#question-paper-source').val();
+            
+            if (selectedSource === 'manual') {
+                // Get questions from manual input
+                $('#manual-questions .question-input').each(function(index) {
+                    const questionText = $(this).find('input').val();
+                    questions[index + 1] = questionText;
+                });
+            } else if (selectedSource === 'upload') {
+                // For demo purposes, we'll use dummy questions
+                // In a real app, this would parse the uploaded file
+                questions = {
+                    1: 'Define artificial intelligence.',
+                    2: 'Explain how machine learning differs from traditional programming.',
+                    3: 'Demonstrate how to normalize a dataset with examples.'
+                };
+            } else {
+                // For demo purposes, we'll use dummy questions from a "generated" paper
+                // In a real app, this would retrieve from session storage
+                questions = {
+                    1: 'Define artificial intelligence.',
+                    2: 'Explain how machine learning differs from traditional programming.',
+                    3: 'Demonstrate how to normalize a dataset with examples.',
+                    4: 'Analyze the strengths and weaknesses of neural networks for image recognition.',
+                    5: 'Evaluate the ethical implications of using facial recognition in public spaces.'
+                };
+            }
+            
+            // In a real app, this would call the backend
+            // For demo purposes, we'll simulate the mapping process
+            setTimeout(function() {
+                // Reset button
+                $('#auto-map-btn').html('<i class="fas fa-magic"></i> Auto-Map').prop('disabled', false);
+                
+                // Simulate mapping
+                const mappedItems = simulateMapping(ocrText, questions);
+                
+                if (mappedItems && Object.keys(mappedItems).length > 0) {
+                    displayMappedItems(mappedItems);
+                    
+                    // Store in session (simulated)
+                    sessionStorage.setItem('mapped_answers', JSON.stringify(mappedItems));
+                    
+                    // Show next steps
+                    $('#next-steps').removeClass('d-none');
+                } else {
+                    $('#mapping-container').addClass('d-none');
+                    $('#mapped-items-container').addClass('d-none');
+                    $('#no-mapping').removeClass('d-none');
+                }
+            }, 1500);
+        });
+        
+        // Save mapping button
+        $('#save-mapping-btn').on('click', function() {
+            // Show loading indicator
+            $(this).html('<i class="fas fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
+            
+            // In a real app, this would call the backend
+            // For demo purposes, we'll simulate the process
+            setTimeout(function() {
+                // Reset button
+                $('#save-mapping-btn').html('<i class="fas fa-save"></i> Save Mapping').prop('disabled', false);
+                
+                // Show success message
+                alert('Mapping saved successfully!');
+            }, 1000);
+        });
+        
+        // Load OCR results
+        function loadOcrResults() {
+            // In a real app, this would call the backend
+            // For demo purposes, we'll retrieve from localStorage or use dummy data
+            const ocrResult = localStorage.getItem('ocr_result');
+            
+            if (ocrResult) {
+                try {
+                    const result = JSON.parse(ocrResult);
+                    displayOcrResult(result.full_text || 'No text found');
+                } catch (e) {
+                    displayOcrResult('Error parsing OCR result');
+                }
+            } else {
+                // Use dummy data for demo
+                const dummyText = `
+Q1. Define artificial intelligence.
+Artificial Intelligence refers to the simulation of human intelligence in machines that are programmed to think and learn like humans. It involves creating systems capable of performing tasks that typically require human intelligence.
+
+Q2. Explain how machine learning differs from traditional programming.
+In traditional programming, developers write explicit rules for the computer to follow, whereas in machine learning, algorithms learn patterns from data to make decisions without being explicitly programmed. Machine learning uses statistical techniques to enable computers to improve their performance over time as they are exposed to more data.
+
+Q3. Demonstrate how to normalize a dataset with examples.
+To normalize a dataset, you calculate (x - min)/(max - min) for each value. For example, with values [10, 20, 30], min=10, max=30, normalized values would be [0, 0.5, 1]. This ensures all values are scaled between 0 and 1, which helps when features have different scales.
+
+Q4. Analyze the strengths and weaknesses of neural networks for image recognition.
+Strengths: High accuracy, ability to learn complex patterns, automatic feature extraction. Weaknesses: Requires large amounts of data, computationally expensive, black-box nature makes interpretability difficult, and susceptibility to adversarial examples.
+                `;
+                
+                displayOcrResult(dummyText);
+            }
+        }
+        
+        // Display OCR result
+        function displayOcrResult(text) {
+            if (text) {
+                $('#ocr-result-container').addClass('d-none');
+                $('#no-text').addClass('d-none');
+                $('#ocr-text').removeClass('d-none');
+                $('#extracted-text').text(text);
+            } else {
+                $('#ocr-result-container').addClass('d-none');
+                $('#ocr-text').addClass('d-none');
+                $('#no-text').removeClass('d-none');
+            }
+        }
+        
+        // Simulate mapping answers to questions
+        function simulateMapping(text, questions) {
+            // In a real app, this would use more sophisticated algorithms
+            // For demo purposes, we'll use a simple pattern matching approach
+            const mappedItems = {};
+            
+            // Split text by question pattern
+            const questionPattern = /Q(\d+)[\.:]?\s+/g;
+            const matches = text.split(questionPattern);
+            
+            // Skip first element if it's empty
+            const startIndex = matches[0].trim() ? 0 : 1;
+            
+            for (let i = startIndex + 1; i < matches.length; i += 2) {
+                const questionNum = parseInt(matches[i-1+startIndex]);
+                const answerText = matches[i+startIndex].trim();
+                
+                if (questionNum && answerText && questions[questionNum]) {
+                    mappedItems[questionNum] = {
+                        question: questions[questionNum],
+                        answer: answerText
+                    };
+                }
+            }
+            
+            return mappedItems;
+        }
+        
+        // Display mapped items
+        function displayMappedItems(mappedItems) {
+            const container = $('#mapped-items-container');
+            container.empty();
+            
+            for (const [qNum, qaData] of Object.entries(mappedItems)) {
+                const mappedItem = `
+                    <div class="mapped-item mb-3" data-question="${qNum}">
+                        <div class="card">
+                            <div class="card-header py-2 px-3 bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Question ${qNum}</strong></span>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary edit-mapping-btn">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body py-2 px-3">
+                                <div class="mb-2">
+                                    <strong>Question:</strong>
+                                    <p class="mb-0 question-text">${qaData.question}</p>
+                                </div>
+                                <div>
+                                    <strong>Answer:</strong>
+                                    <p class="mb-0 answer-text">${qaData.answer}</p>
+                                </div>
+                            </div>
+                            <div class="card-footer py-2 px-3 d-none edit-panel">
+                                <div class="mb-2">
+                                    <label class="form-label">Edit Answer:</label>
+                                    <textarea class="form-control edit-answer" rows="3">${qaData.answer}</textarea>
+                                </div>
+                                <div class="text-end">
+                                    <button class="btn btn-sm btn-secondary cancel-edit-btn">Cancel</button>
+                                    <button class="btn btn-sm btn-primary save-edit-btn">Save</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.append(mappedItem);
+            }
+            
+            // Show mapped items
+            $('#mapping-container').addClass('d-none');
+            $('#no-mapping').addClass('d-none');
+            $('#mapped-items-container').removeClass('d-none');
+            
+            // Set up edit buttons
+            $('.edit-mapping-btn').on('click', function() {
+                const card = $(this).closest('.card');
+                card.find('.edit-panel').removeClass('d-none');
+            });
+            
+            // Cancel edit button
+            $('.cancel-edit-btn').on('click', function() {
+                const card = $(this).closest('.card');
+                card.find('.edit-panel').addClass('d-none');
+            });
+            
+            // Save edit button
+            $('.save-edit-btn').on('click', function() {
+                const card = $(this).closest('.card');
+                const newAnswer = card.find('.edit-answer').val();
+                card.find('.answer-text').text(newAnswer);
+                card.find('.edit-panel').addClass('d-none');
+                
+                // Update session storage with new mapping
+                const mappedItems = JSON.parse(sessionStorage.getItem('mapped_answers') || '{}');
+                const questionNum = card.closest('.mapped-item').data('question');
+                
+                if (mappedItems[questionNum]) {
+                    mappedItems[questionNum].answer = newAnswer;
+                    sessionStorage.setItem('mapped_answers', JSON.stringify(mappedItems));
+                }
+            });
+        }
+        
+        // Initialize
+        loadOcrResults();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+
+{% block title %}OCR Scan - AI-Assisted Grading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="mb-4">OCR Document Scanner</h2>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Scan Handwritten Examination Papers</h5>
+                <p class="card-text">
+                    Upload PDF or image files containing handwritten responses to digitize them. 
+                    The OCR engine will process and convert the handwriting to machine-readable text.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-file-upload"></i> Upload Document
+            </div>
+            <div class="card-body">
+                <form id="upload-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <div class="dropzone" id="dropzone">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Drag and drop files here, or click to select files</p>
+                            <input type="file" id="file-upload" name="file" class="d-none" accept=".pdf,.png,.jpg,.jpeg">
+                        </div>
+                        <div class="mt-2 text-muted small">Supported formats: PDF, PNG, JPG, JPEG</div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="detect-questions" name="detect_questions">
+                        <label class="form-check-label" for="detect-questions">
+                            Automatically detect questions and structure
+                        </label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary" id="scan-btn">
+                            <i class="fas fa-search"></i> Scan Document
+                        </button>
+                        <div class="loader" id="loader"></div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-cog"></i> Advanced Options
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="language-select" class="form-label">OCR Language</label>
+                    <select class="form-select" id="language-select">
+                        <option value="eng" selected>English</option>
+                        <option value="fra">French</option>
+                        <option value="deu">German</option>
+                        <option value="spa">Spanish</option>
+                        <option value="ita">Italian</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="quality-slider" class="form-label">Processing Quality</label>
+                    <input type="range" class="form-range" min="1" max="5" value="3" id="quality-slider">
+                    <div class="d-flex justify-content-between">
+                        <small>Faster</small>
+                        <small>Balanced</small>
+                        <small>Higher Quality</small>
+                    </div>
+                </div>
+                
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" value="" id="enhance-contrast">
+                    <label class="form-check-label" for="enhance-contrast">
+                        Enhance contrast for better recognition
+                    </label>
+                </div>
+                
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" value="" id="noise-reduction">
+                    <label class="form-check-label" for="noise-reduction">
+                        Apply noise reduction
+                    </label>
+                </div>
+                
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="deskew">
+                    <label class="form-check-label" for="deskew">
+                        Auto-deskew (straighten) document
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-file-alt"></i> OCR Results
+                <div class="float-end">
+                    <button class="btn btn-sm btn-outline-primary" id="copy-btn" disabled>
+                        <i class="fas fa-copy"></i> Copy
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" id="save-btn" disabled>
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="result-container">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Scan results will appear here
+                    </div>
+                </div>
+                
+                <!-- OCR Results will be displayed here -->
+                <div id="ocr-text" class="d-none">
+                    <h6 class="mb-3">Extracted Text:</h6>
+                    <div class="border rounded p-3 bg-light" style="max-height: 400px; overflow-y: auto;">
+                        <pre id="result-text" class="mb-0" style="white-space: pre-wrap;"></pre>
+                    </div>
+                </div>
+                
+                <!-- Detected Questions will be displayed here -->
+                <div id="questions-container" class="d-none mt-4">
+                    <h6 class="mb-3">Detected Questions:</h6>
+                    <div id="questions-list"></div>
+                </div>
+                
+                <div class="mt-3 text-center d-none" id="next-steps">
+                    <a href="/map-answers" class="btn btn-success">
+                        <i class="fas fa-arrow-right"></i> Proceed to Answer Mapping
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-image"></i> Document Preview
+            </div>
+            <div class="card-body text-center">
+                <div id="image-preview-container">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Document preview will appear here
+                    </div>
+                </div>
+                <img id="document-preview" class="img-fluid rounded border d-none" alt="Document Preview">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Dropzone functionality
+        const dropzone = $('#dropzone');
+        const fileUpload = $('#file-upload');
+        
+        dropzone.on('click', function() {
+            fileUpload.click();
+        });
+        
+        dropzone.on('dragover', function(e) {
+            e.preventDefault();
+            dropzone.addClass('active');
+        });
+        
+        dropzone.on('dragleave', function() {
+            dropzone.removeClass('active');
+        });
+        
+        dropzone.on('drop', function(e) {
+            e.preventDefault();
+            dropzone.removeClass('active');
+            
+            if (e.originalEvent.dataTransfer.files.length) {
+                fileUpload[0].files = e.originalEvent.dataTransfer.files;
+                updateFileInfo(fileUpload[0].files[0]);
+            }
+        });
+        
+        fileUpload.on('change', function() {
+            if (fileUpload[0].files.length) {
+                updateFileInfo(fileUpload[0].files[0]);
+            }
+        });
+        
+        function updateFileInfo(file) {
+            dropzone.html(`<i class="fas fa-file-alt"></i><p>${file.name} (${formatFileSize(file.size)})</p>`);
+            
+            // Display document preview if it's an image
+            if (file.type.match('image.*')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#image-preview-container').addClass('d-none');
+                    $('#document-preview').attr('src', e.target.result).removeClass('d-none');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // For PDFs, just show an icon
+                $('#image-preview-container').removeClass('d-none').html(
+                    `<i class="fas fa-file-pdf" style="font-size: 5rem; color: #e74c3c;"></i>
+                     <p class="mt-2">${file.name}</p>`
+                );
+                $('#document-preview').addClass('d-none');
+            }
+        }
+        
+        function formatFileSize(bytes) {
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            if (bytes === 0) return '0 Byte';
+            const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+            return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+        }
+        
+        // Form submission
+        $('#upload-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            if (!fileUpload[0].files.length) {
+                alert('Please select a file to scan.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileUpload[0].files[0]);
+            formData.append('detect_questions', $('#detect-questions').is(':checked'));
+            
+            // Add advanced options if needed
+            // These would be processed server-side to configure the OCR engine
+            
+            // Show loader
+            $('#loader').show();
+            $('#scan-btn').prop('disabled', true);
+            
+            $.ajax({
+                url: '/ocr',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    // Hide loader
+                    $('#loader').hide();
+                    $('#scan-btn').prop('disabled', false);
+                    
+                    // Update results
+                    $('#result-container').empty();
+                    $('#ocr-text').removeClass('d-none');
+                    $('#result-text').text(response.full_text || 'No text extracted');
+                    
+                    // Enable buttons
+                    $('#copy-btn, #save-btn').prop('disabled', false);
+                    
+                    // Show next steps
+                    $('#next-steps').removeClass('d-none');
+                    
+                    // Display detected questions if available
+                    if (response.questions && Object.keys(response.questions).length > 0) {
+                        displayQuestions(response.questions);
+                    } else {
+                        $('#questions-container').addClass('d-none');
+                    }
+                },
+                error: function(xhr) {
+                    // Hide loader
+                    $('#loader').hide();
+                    $('#scan-btn').prop('disabled', false);
+                    
+                    // Show error
+                    $('#result-container').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i> Error: ${xhr.responseJSON?.error || 'Failed to process document'}
+                        </div>
+                    `);
+                }
+            });
+        });
+        
+        function displayQuestions(questions) {
+            const questionsList = $('#questions-list');
+            questionsList.empty();
+            
+            for (const [qNum, qText] of Object.entries(questions)) {
+                questionsList.append(`
+                    <div class="card mb-2">
+                        <div class="card-header py-1 px-3">
+                            <strong>Question ${qNum}</strong>
+                        </div>
+                        <div class="card-body py-2 px-3">
+                            <p class="mb-0">${qText}</p>
+                        </div>
+                    </div>
+                `);
+            }
+            
+            $('#questions-container').removeClass('d-none');
+        }
+        
+        // Copy button functionality
+        $('#copy-btn').on('click', function() {
+            const textToCopy = $('#result-text').text();
+            
+            // Create a temporary textarea element to copy from
+            const textarea = document.createElement('textarea');
+            textarea.value = textToCopy;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            
+            // Show success message
+            const originalText = $(this).html();
+            $(this).html('<i class="fas fa-check"></i> Copied');
+            
+            setTimeout(() => {
+                $(this).html(originalText);
+            }, 2000);
+        });
+        
+        // Save button functionality
+        $('#save-btn').on('click', function() {
+            const textToSave = $('#result-text').text();
+            
+            // Create a blob and download link
+            const blob = new Blob([textToSave], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ocr_result.txt';
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    });
+</script>
+{% endblock %}

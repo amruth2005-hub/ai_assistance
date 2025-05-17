@@ -1,0 +1,475 @@
+{% extends "base.html" %}
+
+{% block title %}Grading - AI-Assisted Grading System{% endblock %}
+
+{% block content %}
+<!-- Content from previous template -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Toggle reference source containers
+        $('#reference-source').on('change', function() {
+            const selectedSource = $(this).val();
+            
+            $('#manual-reference-container, #textbook-reference-container').addClass('d-none');
+            
+            if (selectedSource === 'manual') {
+                $('#manual-reference-container').removeClass('d-none');
+            } else if (selectedSource === 'textbook') {
+                $('#textbook-reference-container').removeClass('d-none');
+            }
+        });
+        
+        // Load mapped answers
+        function loadMappedAnswers() {
+            $.ajax({
+                url: '/map-answers',
+                type: 'GET',
+                success: function(response) {
+                    if (response.mapped_answers && Object.keys(response.mapped_answers).length > 0) {
+                        displayMappedAnswers(response.mapped_answers);
+                    } else {
+                        $('#mapped-answers-container').addClass('d-none');
+                        $('#questions-list').addClass('d-none');
+                        $('#no-answers').removeClass('d-none');
+                    }
+                },
+                error: function() {
+                    $('#mapped-answers-container').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i> Error loading mapped answers
+                        </div>
+                    `);
+                }
+            });
+        }
+        
+        // Reload button event
+        $('#reload-btn').on('click', loadMappedAnswers);
+        
+        // Display mapped answers
+        function displayMappedAnswers(mappedAnswers) {
+            const questionsList = $('#questions-list');
+            questionsList.empty();
+            
+            let qIndex = 1;
+            for (const [qNum, qaData] of Object.entries(mappedAnswers)) {
+                const question = qaData.question || 'No question text available';
+                const answer = qaData.answer || 'No answer provided';
+                
+                const questionItem = `
+                    <div class="question-item mb-3" data-question="${qNum}">
+                        <div class="card">
+                            <div class="card-header py-2 px-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Q${qNum}:</strong> ${question.substring(0, 50)}${question.length > 50 ? '...' : ''}</span>
+                                    <div>
+                                        <span class="badge bg-secondary" id="grade-badge-${qNum}">Not Graded</span>
+                                        <button class="btn btn-sm btn-outline-primary ms-2 grade-question-btn" data-question="${qNum}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body py-2 px-3 d-none">
+                                <p class="mb-2"><strong>Question:</strong> ${question}</p>
+                                <p class="mb-0"><strong>Answer:</strong> ${answer}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                questionsList.append(questionItem);
+                qIndex++;
+            }
+            
+            // Show questions list
+            $('#mapped-answers-container').addClass('d-none');
+            $('#no-answers').addClass('d-none');
+            $('#questions-list').removeClass('d-none');
+            
+            // Toggle question details
+            $('.question-item .card-header').on('click', function() {
+                $(this).siblings('.card-body').toggleClass('d-none');
+            });
+            
+            // Grade question button event
+            $('.grade-question-btn').on('click', function(e) {
+                e.stopPropagation();
+                const questionNum = $(this).data('question');
+                loadQuestionForGrading(questionNum, mappedAnswers[questionNum]);
+            });
+        }
+        
+        // Load question for grading
+        function loadQuestionForGrading(questionNum, questionData) {
+            // Update grading panel with question data
+            $('#question-header').text(`Question ${questionNum}`);
+            $('#question-text').text(questionData.question || 'No question text available');
+            $('#student-answer').text(questionData.answer || 'No answer provided');
+            
+            // Try to get reference answer from generated paper if available
+            let referenceAnswer = '';
+            if ($('#reference-source').val() === 'generated') {
+                // This would be retrieved from the session in a real app
+                // For now, we'll just simulate it
+                $.ajax({
+                    url: '/generate-question',
+                    type: 'GET',
+                    success: function(response) {
+                        if (response.question_paper) {
+                            for (const section of response.question_paper.sections) {
+                                for (const question of section.questions) {
+                                    if (question.number == questionNum) {
+                                        referenceAnswer = question.answer || '';
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        $('#reference-answer').val(referenceAnswer);
+                    },
+                    error: function() {
+                        $('#reference-answer').val('');
+                    }
+                });
+            } else {
+                $('#reference-answer').val('');
+            }
+            
+            // Try to identify cognitive level from question text
+            const questionText = questionData.question || '';
+            let cognitiveLevel = 'understand'; // Default
+            
+            // Simple heuristic for demo purposes
+            const rememberKeywords = ['define', 'list', 'name', 'identify', 'recall'];
+            const understandKeywords = ['explain', 'describe', 'discuss', 'compare'];
+            const applyKeywords = ['apply', 'solve', 'calculate', 'demonstrate'];
+            const analyzeKeywords = ['analyze', 'differentiate', 'examine', 'compare', 'contrast'];
+            const evaluateKeywords = ['evaluate', 'justify', 'critique', 'assess'];
+            const createKeywords = ['create', 'design', 'develop', 'formulate', 'propose'];
+            
+            const keywordMap = {
+                'remember': rememberKeywords,
+                'understand': understandKeywords,
+                'apply': applyKeywords,
+                'analyze': analyzeKeywords,
+                'evaluate': evaluateKeywords,
+                'create': createKeywords
+            };
+            
+            for (const [level, keywords] of Object.entries(keywordMap)) {
+                for (const keyword of keywords) {
+                    if (questionText.toLowerCase().includes(keyword)) {
+                        cognitiveLevel = level;
+                        break;
+                    }
+                }
+            }
+            
+            $('#cognitive-level').val(cognitiveLevel);
+            
+            // Hide grading results and show grading panel
+            $('#grading-result').addClass('d-none');
+            $('#grading-container').addClass('d-none');
+            $('#grading-panel').removeClass('d-none');
+            
+            // Store current question number
+            $('#grade-btn').data('question', questionNum);
+        }
+        
+        // Grade answer button event
+        $('#grade-btn').on('click', function() {
+            const questionNum = $(this).data('question');
+            const studentAnswer = $('#student-answer').text();
+            const referenceAnswer = $('#reference-answer').val();
+            const cognitiveLevel = $('#cognitive-level').val();
+            const maxScore = $('#max-score').val();
+            
+            if (!referenceAnswer) {
+                alert('Please provide a reference answer for grading.');
+                return;
+            }
+            
+            // Prepare grading data
+            const gradingData = {
+                student_answer: studentAnswer,
+                reference_answer: referenceAnswer,
+                cognitive_level: cognitiveLevel,
+                max_score: maxScore,
+                question_num: questionNum,
+                config: {
+                    strictness: $('#strictness-slider').val(),
+                    keyword_matching: $('#keyword-matching').is(':checked'),
+                    partial_credit: $('#partial-credit').is(':checked'),
+                    detailed_feedback: $('#detailed-feedback').is(':checked')
+                }
+            };
+            
+            // Show loading indicator
+            $('#grade-btn').html('<i class="fas fa-spinner fa-spin"></i> Grading...').prop('disabled', true);
+            
+            // In a real app, this would call the backend
+            // For demo purposes, we'll simulate the grading process
+            setTimeout(function() {
+                // Reset button
+                $('#grade-btn').html('<i class="fas fa-check-circle"></i> Grade Answer').prop('disabled', false);
+                
+                // Simulate grading result
+                const similarity = Math.random() * 0.4 + 0.5; // Random between 0.5 and 0.9
+                const scorePercentage = similarity * 100;
+                const score = (similarity * maxScore).toFixed(1);
+                
+                // Update result display
+                $('#result-score').text(score);
+                $('#result-max-score').text(maxScore);
+                $('#result-progress').css('width', `${scorePercentage}%`).text(`${Math.round(scorePercentage)}%`);
+                
+                // Set appropriate color based on score percentage
+                let progressClass = 'bg-danger';
+                if (scorePercentage >= 80) {
+                    progressClass = 'bg-success';
+                } else if (scorePercentage >= 60) {
+                    progressClass = 'bg-warning';
+                } else if (scorePercentage >= 40) {
+                    progressClass = 'bg-danger';
+                }
+                
+                $('#result-progress').removeClass('bg-success bg-warning bg-danger')
+                                   .addClass(progressClass);
+                
+                // Update similarity display
+                $('#similarity-progress').css('width', `${similarity * 100}%`);
+                $('#similarity-text').text(`The answer has ${Math.round(similarity * 100)}% semantic similarity with the reference answer.`);
+                
+                // Generate feedback based on cognitive level and score
+                let feedback = '';
+                if (scorePercentage >= 80) {
+                    feedback = 'Excellent work! Your answer demonstrates a strong understanding of the concept.';
+                } else if (scorePercentage >= 60) {
+                    feedback = 'Good answer with most key points covered. Consider expanding on the details.';
+                } else if (scorePercentage >= 40) {
+                    feedback = 'Your answer addresses some aspects of the question, but needs improvement in depth and accuracy.';
+                } else {
+                    feedback = 'Your answer needs significant improvement. Please review the course material on this topic.';
+                }
+                
+                // Add cognitive level specific feedback
+                switch (cognitiveLevel) {
+                    case 'remember':
+                        feedback += ' Try to include more specific terminology and definitions in your answers.';
+                        break;
+                    case 'understand':
+                        feedback += ' Focus on demonstrating your understanding by explaining concepts in your own words.';
+                        break;
+                    case 'apply':
+                        feedback += ' Work on showing how to apply these concepts to solving problems or real-world situations.';
+                        break;
+                    case 'analyze':
+                        feedback += ' Develop your analytical skills by breaking down concepts into their components and examining relationships.';
+                        break;
+                    case 'evaluate':
+                        feedback += ' Strengthen your evaluative arguments by providing supporting evidence and considering multiple perspectives.';
+                        break;
+                    case 'create':
+                        feedback += ' Continue developing innovative approaches and integrating concepts in original ways.';
+                        break;
+                }
+                
+                $('#feedback-text').text(feedback);
+                
+                // Show grading result
+                $('#grading-result').removeClass('d-none');
+                
+                // Update question list badge
+                $(`#grade-badge-${questionNum}`).removeClass('bg-secondary').addClass('bg-success').text(`${score}/${maxScore}`);
+                
+                // Enable save results button
+                $('#save-grades-btn').prop('disabled', false);
+                
+                // Update grading summary
+                updateGradingSummary();
+            }, 1500);
+        });
+        
+        // Apply manual score override
+        $('#apply-override-btn').on('click', function() {
+            const overrideScore = $('#override-score').val();
+            const maxScore = $('#max-score').val();
+            const questionNum = $('#grade-btn').data('question');
+            
+            if (!overrideScore) {
+                alert('Please enter a score to override.');
+                return;
+            }
+            
+            if (parseFloat(overrideScore) > parseFloat(maxScore)) {
+                alert(`Override score cannot exceed maximum score (${maxScore}).`);
+                return;
+            }
+            
+            // Update display
+            $('#result-score').text(overrideScore);
+            const scorePercentage = (overrideScore / maxScore) * 100;
+            $('#result-progress').css('width', `${scorePercentage}%`).text(`${Math.round(scorePercentage)}%`);
+            
+            // Set appropriate color based on score percentage
+            let progressClass = 'bg-danger';
+            if (scorePercentage >= 80) {
+                progressClass = 'bg-success';
+            } else if (scorePercentage >= 60) {
+                progressClass = 'bg-warning';
+            } else if (scorePercentage >= 40) {
+                progressClass = 'bg-danger';
+            }
+            
+            $('#result-progress').removeClass('bg-success bg-warning bg-danger')
+                               .addClass(progressClass);
+            
+            // Update badge
+            $(`#grade-badge-${questionNum}`).removeClass('bg-secondary').addClass('bg-success').text(`${overrideScore}/${maxScore}`);
+            
+            // Clear override input
+            $('#override-score').val('');
+            
+            // Add note to feedback
+            const currentFeedback = $('#feedback-text').text();
+            $('#feedback-text').text(currentFeedback + ' [Score manually adjusted by grader]');
+            
+            // Update summary
+            updateGradingSummary();
+        });
+        
+        // Update grading summary
+        function updateGradingSummary() {
+            let totalScore = 0;
+            let maxPossible = 0;
+            let gradedCount = 0;
+            
+            // Collect scores from badges
+            $('.question-item').each(function() {
+                const badge = $(this).find('.badge');
+                
+                if (!badge.hasClass('bg-secondary')) {
+                    gradedCount++;
+                    const scoreText = badge.text();
+                    const scoreParts = scoreText.split('/');
+                    
+                    if (scoreParts.length === 2) {
+                        totalScore += parseFloat(scoreParts[0]);
+                        maxPossible += parseFloat(scoreParts[1]);
+                    }
+                }
+            });
+            
+            // Update summary display
+            $('#summary-total-score').text(totalScore.toFixed(1));
+            $('#summary-max-score').text(maxPossible.toFixed(1));
+            
+            const percentage = maxPossible > 0 ? (totalScore / maxPossible) * 100 : 0;
+            $('#summary-percentage').text(`${percentage.toFixed(1)}%`);
+            
+            const totalQuestions = $('.question-item').length;
+            $('#summary-questions').text(`${gradedCount}/${totalQuestions}`);
+            
+            // Show summary
+            $('#summary-container').addClass('d-none');
+            $('#grading-summary').removeClass('d-none');
+        }
+        
+        // Grade all button event
+        $('#grade-all-btn').on('click', function() {
+            if ($('#reference-source').val() === 'manual') {
+                alert('Manual reference mode requires you to grade each question individually.');
+                return;
+            }
+            
+            // Show loading indicator
+            $(this).html('<i class="fas fa-spinner fa-spin"></i> Processing...').prop('disabled', true);
+            
+            // In a real app, this would call the backend
+            // For demo purposes, we'll simulate the process
+            setTimeout(function() {
+                // Reset button
+                $('#grade-all-btn').html('<i class="fas fa-magic"></i> Grade All').prop('disabled', false);
+                
+                // Simulate grading all questions
+                $('.question-item').each(function() {
+                    const questionNum = $(this).data('question');
+                    const maxScore = 10; // Default max score
+                    
+                    // Generate random score between 5 and 10
+                    const score = (Math.random() * 5 + 5).toFixed(1);
+                    
+                    // Update badge
+                    $(`#grade-badge-${questionNum}`).removeClass('bg-secondary').addClass('bg-success').text(`${score}/${maxScore}`);
+                });
+                
+                // Update summary
+                updateGradingSummary();
+                
+                // Enable save button
+                $('#save-grades-btn').prop('disabled', false);
+                
+                // Show success message
+                alert('All questions have been graded successfully!');
+            }, 2000);
+        });
+        
+        // Save grades button event
+        $('#save-grades-btn').on('click', function() {
+            // Show loading indicator
+            $(this).html('<i class="fas fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
+            
+            // Collect grading results
+            const gradingResults = {};
+            $('.question-item').each(function() {
+                const questionNum = $(this).data('question');
+                const badge = $(this).find('.badge');
+                
+                if (!badge.hasClass('bg-secondary')) {
+                    const scoreText = badge.text();
+                    const scoreParts = scoreText.split('/');
+                    
+                    if (scoreParts.length === 2) {
+                        gradingResults[questionNum] = {
+                            score: parseFloat(scoreParts[0]),
+                            max_score: parseFloat(scoreParts[1]),
+                            percentage: (parseFloat(scoreParts[0]) / parseFloat(scoreParts[1])) * 100,
+                            cognitive_level: questionNum % 6 === 0 ? 'create' : 
+                                          questionNum % 5 === 0 ? 'evaluate' : 
+                                          questionNum % 4 === 0 ? 'analyze' : 
+                                          questionNum % 3 === 0 ? 'apply' : 
+                                          questionNum % 2 === 0 ? 'understand' : 'remember',
+                            feedback: `Feedback for question ${questionNum}`
+                        };
+                    }
+                }
+            });
+            
+            // In a real app, this would send the data to the server
+            // For demo purposes, we'll simulate the process
+            setTimeout(function() {
+                // Reset button
+                $('#save-grades-btn').html('<i class="fas fa-save"></i> Save Results').prop('disabled', false);
+                
+                // Store in session (simulated)
+                sessionStorage.setItem('grading_results', JSON.stringify(gradingResults));
+                
+                // Show success message
+                alert('Grading results have been saved successfully!');
+                
+                // Enable viewing analytics
+                $('#summary-container').addClass('d-none');
+                $('#grading-summary').removeClass('d-none');
+            }, 1500);
+        });
+        
+        // Initialize
+        loadMappedAnswers();
+    });
+</script>
+{% endblock %}

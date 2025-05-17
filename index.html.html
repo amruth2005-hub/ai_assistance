@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AI-Assisted Grading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="mb-4">Dashboard</h2>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Welcome to the AI-Assisted Grading System</h5>
+                <p class="card-text">
+                    This system helps educators automate the grading process for handwritten examination manuscripts.
+                    Use the navigation menu to access different features of the system.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="dashboard-stat">
+            <div class="icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="number">{{ stats.scanned_papers|default(0) }}</div>
+            <div class="label">Papers Scanned</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-stat">
+            <div class="icon">
+                <i class="fas fa-check-square"></i>
+            </div>
+            <div class="number">{{ stats.graded_papers|default(0) }}</div>
+            <div class="label">Papers Graded</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-stat">
+            <div class="icon">
+                <i class="fas fa-edit"></i>
+            </div>
+            <div class="number">{{ stats.question_papers|default(0) }}</div>
+            <div class="label">Question Papers</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-stat">
+            <div class="icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="number">{{ stats.time_saved|default('0h') }}</div>
+            <div class="label">Time Saved</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tasks"></i> Quick Actions
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="/ocr" class="list-group-item list-group-item-action">
+                        <i class="fas fa-file-upload"></i> Scan New Document
+                    </a>
+                    <a href="/generate-question" class="list-group-item list-group-item-action">
+                        <i class="fas fa-plus-circle"></i> Create New Question Paper
+                    </a>
+                    <a href="/batch-process" class="list-group-item list-group-item-action">
+                        <i class="fas fa-layer-group"></i> Batch Process Documents
+                    </a>
+                    <a href="/analytics" class="list-group-item list-group-item-action">
+                        <i class="fas fa-chart-line"></i> View Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-history"></i> Recent Activity
+            </div>
+            <div class="card-body">
+                {% if recent_activity %}
+                    <ul class="list-group">
+                        {% for activity in recent_activity %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ activity.description }}
+                                <span class="badge bg-primary rounded-pill">{{ activity.time }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No recent activity</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> System Overview
+            </div>
+            <div class="card-body">
+                <h5>AI-Assisted Grading and Evaluation System</h5>
+                <p>This system incorporates several modules working together to automate the examination grading process:</p>
+                <ul>
+                    <li><strong>OCR Module:</strong> Transforms handwritten responses into machine-readable digital text</li>
+                    <li><strong>Answer Mapping Module:</strong> Associates digitized answers with corresponding questions</li>
+                    <li><strong>Grading Module:</strong> Uses semantic AI and keyword matching to evaluate answers against reference content</li>
+                    <li><strong>RBT Evaluation:</strong> Aligns each response with Bloom's Revised Taxonomy cognitive levels</li>
+                    <li><strong>Feedback System:</strong> Provides transparent justifications for scores and improvement suggestions</li>
+                    <li><strong>Question Paper Generator:</strong> Automatically produces structured exam papers based on user-defined blueprints</li>
+                </ul>
+                <p>Start by using the OCR scan feature to digitize handwritten exam papers, or use the Question Generator to create new examination materials.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

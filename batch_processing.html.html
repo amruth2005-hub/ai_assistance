@@ -1,0 +1,580 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Processing - AI-Assisted Grading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="mb-4">Batch Processing</h2>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Process Multiple Submissions</h5>
+                <p class="card-text">
+                    Upload and process multiple exam papers at once to grade them against the same question paper.
+                    This feature is ideal for grading entire classes or comparison studies.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-file-upload"></i> Upload Submissions
+            </div>
+            <div class="card-body">
+                <form id="batch-upload-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <div class="dropzone" id="dropzone">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Drag and drop files here, or click to select files</p>
+                            <input type="file" id="file-upload" name="files[]" class="d-none" accept=".pdf,.png,.jpg,.jpeg" multiple>
+                        </div>
+                        <div class="mt-2 text-muted small">Supported formats: PDF, PNG, JPG, JPEG</div>
+                    </div>
+                    
+                    <div id="file-list" class="mb-3 d-none">
+                        <h6>Selected Files:</h6>
+                        <ul class="list-group" id="selected-files">
+                            <!-- Files will be listed here -->
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Question Paper</label>
+                        <select class="form-select" id="question-paper">
+                            <option value="generated" selected>Use Generated Question Paper</option>
+                            <option value="upload">Upload Different Question Paper</option>
+                        </select>
+                    </div>
+                    
+                    <div id="question-paper-upload" class="mb-3 d-none">
+                        <input type="file" class="form-control" id="question-paper-file" accept=".pdf,.docx,.txt">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary w-100" id="process-btn">
+                            <i class="fas fa-cogs"></i> Process Batch
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cog"></i> Processing Options
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">File Naming Convention</label>
+                    <select class="form-select" id="naming-convention">
+                        <option value="studentid" selected>Student ID in Filename</option>
+                        <option value="custom">Custom Pattern</option>
+                        <option value="none">No Specific Convention</option>
+                    </select>
+                </div>
+                
+                <div id="custom-pattern" class="mb-3 d-none">
+                    <label class="form-label">Custom Pattern</label>
+                    <input type="text" class="form-control" placeholder="E.g., {course}_{studentid}_{date}">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Processing Priority</label>
+                    <select class="form-select" id="processing-priority">
+                        <option value="speed">Speed (Faster, Lower Accuracy)</option>
+                        <option value="balanced" selected>Balanced</option>
+                        <option value="accuracy">Accuracy (Slower, Higher Accuracy)</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="enable-notifications" checked>
+                        <label class="form-check-label" for="enable-notifications">
+                            Notify when processing completes
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="auto-export" checked>
+                        <label class="form-check-label" for="auto-export">
+                            Automatically export results when done
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tasks"></i> Batch Processing Status
+                <div class="float-end">
+                    <button class="btn btn-sm btn-outline-primary" id="refresh-btn">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="status-container">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Upload and process files to see status information
+                    </div>
+                </div>
+                
+                <div id="processing-status" class="d-none">
+                    <div class="mb-4">
+                        <h6 class="mb-2">Overall Progress</h6>
+                        <div class="progress mb-2" style="height: 20px;">
+                            <div id="overall-progress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                        </div>
+                        <small id="status-text" class="text-muted">Preparing to process files...</small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-2">Files Status</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Filename</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="file-status-tbody">
+                                    <!-- File status rows will be added here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="processing-complete" class="d-none">
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> Batch processing completed successfully!
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-2">Class Summary</h6>
+                        <div class="row">
+                            <div class="col-md-3 text-center">
+                                <div class="stat-card p-3 rounded bg-light">
+                                    <h3 id="average-score">0%</h3>
+                                    <p class="mb-0">Class Average</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="stat-card p-3 rounded bg-light">
+                                    <h3 id="highest-score">0%</h3>
+                                    <p class="mb-0">Highest Score</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="stat-card p-3 rounded bg-light">
+                                    <h3 id="lowest-score">0%</h3>
+                                    <p class="mb-0">Lowest Score</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="stat-card p-3 rounded bg-light">
+                                    <h3 id="file-count">0</h3>
+                                    <p class="mb-0">Papers Processed</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-2">Score Distribution</h6>
+                        <div id="score-chart-container" style="height: 300px;">
+                            <!-- Chart will be rendered here -->
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-2">Results</h6>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Student ID</th>
+                                        <th>File</th>
+                                        <th>Total Score</th>
+                                        <th>Percentage</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-tbody">
+                                    <!-- Result rows will be added here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="btn-group">
+                            <button class="btn btn-primary" id="export-all-btn">
+                                <i class="fas fa-file-export"></i> Export All Results
+                            </button>
+                            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="visually-hidden">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" data-format="csv">Export as CSV</a></li>
+                                <li><a class="dropdown-item" href="#" data-format="excel">Export as Excel</a></li>
+                                <li><a class="dropdown-item" href="#" data-format="pdf">Export as PDF</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Toggle question paper upload
+        $('#question-paper').on('change', function() {
+            const selectedValue = $(this).val();
+            
+            if (selectedValue === 'upload') {
+                $('#question-paper-upload').removeClass('d-none');
+            } else {
+                $('#question-paper-upload').addClass('d-none');
+            }
+        });
+        
+        // Toggle custom pattern input
+        $('#naming-convention').on('change', function() {
+            const selectedValue = $(this).val();
+            
+            if (selectedValue === 'custom') {
+                $('#custom-pattern').removeClass('d-none');
+            } else {
+                $('#custom-pattern').addClass('d-none');
+            }
+        });
+        
+        // Dropzone functionality
+        const dropzone = $('#dropzone');
+        const fileUpload = $('#file-upload');
+        
+        dropzone.on('click', function() {
+            fileUpload.click();
+        });
+        
+        dropzone.on('dragover', function(e) {
+            e.preventDefault();
+            dropzone.addClass('active');
+        });
+        
+        dropzone.on('dragleave', function() {
+            dropzone.removeClass('active');
+        });
+        
+        dropzone.on('drop', function(e) {
+            e.preventDefault();
+            dropzone.removeClass('active');
+            
+            if (e.originalEvent.dataTransfer.files.length) {
+                fileUpload[0].files = e.originalEvent.dataTransfer.files;
+                updateFileList(fileUpload[0].files);
+            }
+        });
+        
+        fileUpload.on('change', function() {
+            if (fileUpload[0].files.length) {
+                updateFileList(fileUpload[0].files);
+            }
+        });
+        
+        // Update file list
+        function updateFileList(files) {
+            const fileList = $('#file-list');
+            const selectedFiles = $('#selected-files');
+            selectedFiles.empty();
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const fileItem = `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-file-alt me-2"></i>${file.name}</span>
+                        <span class="badge bg-primary rounded-pill">${formatFileSize(file.size)}</span>
+                    </li>
+                `;
+                
+                selectedFiles.append(fileItem);
+            }
+            
+            if (files.length > 0) {
+                fileList.removeClass('d-none');
+            } else {
+                fileList.addClass('d-none');
+            }
+        }
+        
+        // Format file size
+        function formatFileSize(bytes) {
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            if (bytes === 0) return '0 Byte';
+            const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+            return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+        }
+        
+        // Batch upload form submission
+        $('#batch-upload-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            if (!fileUpload[0].files.length) {
+                alert('Please select files to process.');
+                return;
+            }
+            
+            // Prepare for processing
+            $('#status-container').addClass('d-none');
+            $('#processing-status').removeClass('d-none');
+            $('#processing-complete').addClass('d-none');
+            
+            // Update file status table
+            const fileStatusTable = $('#file-status-tbody');
+            fileStatusTable.empty();
+            
+            for (let i = 0; i < fileUpload[0].files.length; i++) {
+                const file = fileUpload[0].files[i];
+                const fileRow = `
+                    <tr data-file="${file.name}">
+                        <td><small>${file.name}</small></td>
+                        <td><span class="badge bg-warning">Queued</span></td>
+                        <td class="text-end">-</td>
+                    </tr>
+                `;
+                
+                fileStatusTable.append(fileRow);
+            }
+            
+            // Disable form elements during processing
+            $('#process-btn').html('<i class="fas fa-spinner fa-spin"></i> Processing...').prop('disabled', true);
+            
+            // In a real app, this would call the backend with FormData
+            // For demo purposes, we'll simulate processing
+            simulateBatchProcessing(fileUpload[0].files);
+        });
+        
+        // Simulate batch processing
+        function simulateBatchProcessing(files) {
+            const totalFiles = files.length;
+            let processedFiles = 0;
+            
+            // Simulate processing each file with delays
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                // Update status to "Processing" after a delay
+                setTimeout(function() {
+                    $(`tr[data-file="${file.name}"] td:nth-child(2)`)
+                        .html('<span class="badge bg-info">Processing</span>');
+                    
+                    // Update progress bar
+                    updateProgress(processedFiles, totalFiles);
+                    $('#status-text').text(`Processing file ${processedFiles + 1} of ${totalFiles}...`);
+                    
+                }, i * 800);
+                
+                // Simulate completion after a further delay
+                setTimeout(function() {
+                    // Generate random score
+                    const score = Math.floor(Math.random() * 41) + 60; // 60-100
+                    
+                    // Update status to "Completed" with score
+                    $(`tr[data-file="${file.name}"] td:nth-child(2)`)
+                        .html('<span class="badge bg-success">Completed</span>');
+                    $(`tr[data-file="${file.name}"] td:nth-child(3)`)
+                        .text(`${score}%`);
+                    
+                    // Increment processed count
+                    processedFiles++;
+                    
+                    // Update progress bar
+                    updateProgress(processedFiles, totalFiles);
+                    $('#status-text').text(`Processed ${processedFiles} of ${totalFiles} files.`);
+                    
+                    // Check if all files are processed
+                    if (processedFiles === totalFiles) {
+                        completeProcessing(files);
+                    }
+                }, i * 800 + 1500);
+            }
+        }
+        
+        // Update progress bar
+        function updateProgress(processed, total) {
+            const percentage = Math.round((processed / total) * 100);
+            $('#overall-progress').css('width', `${percentage}%`).text(`${percentage}%`);
+        }
+        
+        // Complete processing
+        function completeProcessing(files) {
+            // Short delay for UX
+            setTimeout(function() {
+                // Hide processing status and show completion
+                $('#processing-status').addClass('d-none');
+                $('#processing-complete').removeClass('d-none');
+                
+                // Reset process button
+                $('#process-btn').html('<i class="fas fa-cogs"></i> Process Batch').prop('disabled', false);
+                
+                // Generate results data
+                const results = [];
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const score = parseInt($(`tr[data-file="${file.name}"] td:nth-child(3)`).text());
+                    
+                    // Extract student ID from filename (simplified for demo)
+                    const studentId = `S${1000 + i}`;
+                    
+                    results.push({
+                        studentId: studentId,
+                        filename: file.name,
+                        score: score,
+                        totalMarks: 100, // Simplified for demo
+                        percentage: score
+                    });
+                }
+                
+                // Calculate summary statistics
+                const scores = results.map(r => r.percentage);
+                const average = scores.reduce((a, b) => a + b, 0) / scores.length;
+                const highest = Math.max(...scores);
+                const lowest = Math.min(...scores);
+                
+                // Update summary stats
+                $('#average-score').text(`${average.toFixed(1)}%`);
+                $('#highest-score').text(`${highest}%`);
+                $('#lowest-score').text(`${lowest}%`);
+                $('#file-count').text(files.length);
+                
+                // Populate results table
+                const resultsTable = $('#results-tbody');
+                resultsTable.empty();
+                
+                for (const result of results) {
+                    let badgeClass = 'bg-danger';
+                    if (result.percentage >= 80) {
+                        badgeClass = 'bg-success';
+                    } else if (result.percentage >= 60) {
+                        badgeClass = 'bg-warning';
+                    }
+                    
+                    const resultRow = `
+                        <tr>
+                            <td>${result.studentId}</td>
+                            <td>${result.filename}</td>
+                            <td>${result.score} / ${result.totalMarks}</td>
+                            <td><span class="badge ${badgeClass}">${result.percentage}%</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary view-result-btn" data-student="${result.studentId}">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    
+                    resultsTable.append(resultRow);
+                }
+                
+                // Create chart (using a simplified approach for demo)
+                createScoreChart(scores);
+                
+            }, 1000);
+        }
+        
+        // Create score distribution chart
+        function createScoreChart(scores) {
+            // In a real app, this would use a proper charting library
+            // For demo purposes, we'll create a simple bar chart
+            
+            // Group scores into ranges
+            const ranges = {
+                '90-100': 0,
+                '80-89': 0,
+                '70-79': 0,
+                '60-69': 0,
+                '50-59': 0,
+                '< 50': 0
+            };
+            
+            for (const score of scores) {
+                if (score >= 90) ranges['90-100']++;
+                else if (score >= 80) ranges['80-89']++;
+                else if (score >= 70) ranges['70-79']++;
+                else if (score >= 60) ranges['60-69']++;
+                else if (score >= 50) ranges['50-59']++;
+                else ranges['< 50']++;
+            }
+            
+            // Create a simple bar chart using div elements
+            const chartContainer = $('#score-chart-container');
+            chartContainer.empty();
+            
+            const chart = `
+                <div class="d-flex align-items-end" style="height: 100%;">
+                    ${Object.entries(ranges).map(([range, count]) => {
+                        const percentage = (count / scores.length) * 100;
+                        let barColor = 'bg-success';
+                        
+                        if (range === '< 50' || range === '50-59') {
+                            barColor = 'bg-danger';
+                        } else if (range === '60-69') {
+                            barColor = 'bg-warning';
+                        }
+                        
+                        return `
+                            <div class="d-flex flex-column align-items-center mx-2" style="flex: 1;">
+                                <div class="small mb-1">${count} (${percentage.toFixed(1)}%)</div>
+                                <div class="${barColor}" style="width: 100%; height: ${percentage * 2}px; max-height: 200px;"></div>
+                                <div class="mt-2">${range}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            
+            chartContainer.append(chart);
+        }
+        
+        // View result button
+        $(document).on('click', '.view-result-btn', function() {
+            const studentId = $(this).data('student');
+            alert(`Viewing detailed results for student ${studentId}. In a full implementation, this would open a detailed view.`);
+        });
+        
+        // Export buttons
+        $('#export-all-btn').on('click', function() {
+            alert('Exporting all results as CSV. In a full implementation, this would download a CSV file.');
+        });
+        
+        $('.dropdown-item').on('click', function(e) {
+            e.preventDefault();
+            const format = $(this).data('format');
+            alert(`Exporting all results as ${format.toUpperCase()}. In a full implementation, this would download a ${format.toUpperCase()} file.`);
+        });
+        
+        // Refresh button
+        $('#refresh-btn').on('click', function() {
+            alert('In a real implementation, this would refresh the processing status from the server.');
+        });
+    });
+</script>
+{% endblock %}

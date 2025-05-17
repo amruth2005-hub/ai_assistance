@@ -1,0 +1,415 @@
+{% extends "base.html" %}
+
+{% block title %}Question Generator - AI-Assisted Grading System{% endblock %}
+
+{% block content %}
+<!-- Content from previous part -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Initialize variables
+        let sectionCount = 2; // Start with 2 sections by default
+        
+        // Calculate total percentage for cognitive levels
+        function updatePercentageTotal(sectionElement) {
+            const inputs = $(sectionElement).find('.cognitive-level');
+            let total = 0;
+            
+            inputs.each(function() {
+                total += parseInt($(this).val()) || 0;
+            });
+            
+            const totalElement = $(sectionElement).find('.total-percentage');
+            const progressBar = $(sectionElement).find('.progress-bar');
+            
+            totalElement.text(`Total: ${total}%`);
+            
+            // Update progress bar
+            if (total === 100) {
+                progressBar.removeClass('bg-danger').addClass('bg-primary');
+            } else {
+                progressBar.removeClass('bg-primary').addClass('bg-danger');
+            }
+            
+            progressBar.css('width', `${Math.min(total, 100)}%`);
+            progressBar.attr('aria-valuenow', Math.min(total, 100));
+        }
+        
+        // Update cognitive level percentages when inputs change
+        $(document).on('input', '.cognitive-level', function() {
+            const sectionCard = $(this).closest('.section-card');
+            updatePercentageTotal(sectionCard);
+        });
+        
+        // Initialize percentages for all sections
+        $('.section-card').each(function() {
+            updatePercentageTotal(this);
+        });
+        
+        // Add new section
+        $('#add-section-btn').on('click', function() {
+            sectionCount++;
+            
+            const newSection = `
+                <div class="section-card mb-4" data-section="${sectionCount}">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Section ${sectionCount}</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-section">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Section Name</label>
+                                <input type="text" class="form-control section-name" placeholder="E.g., Section ${String.fromCharCode(64 + sectionCount)}" value="Section ${String.fromCharCode(64 + sectionCount)}">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <input type="text" class="form-control section-description" placeholder="E.g., Answer any questions">
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Number of Questions</label>
+                                    <input type="number" class="form-control question-count" value="3">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Marks per Question</label>
+                                    <input type="number" class="form-control marks-per-question" value="15">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Cognitive Levels Distribution</label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text">Remember</span>
+                                            <input type="number" class="form-control cognitive-level" data-level="remember" value="0" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text">Understand</span>
+                                            <input type="number" class="form-control cognitive-level" data-level="understand" value="0" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text">Apply</span>
+                                            <input type="number" class="form-control cognitive-level" data-level="apply" value="0" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text">Analyze</span>
+                                            <input type="number" class="form-control cognitive-level" data-level="analyze" value="30" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text">Evaluate</span>
+                                            <input type="number" class="form-control cognitive-level" data-level="evaluate" value="40" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text">Create</span>
+                                            <input type="number" class="form-control cognitive-level" data-level="create" value="30" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="progress mt-2" style="height: 5px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: 100%;" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <small class="text-muted total-percentage">Total: 100%</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('#sections-container').append(newSection);
+            updatePercentageTotal($('.section-card').last());
+        });
+        
+        // Remove section
+        $(document).on('click', '.remove-section', function() {
+            const sectionCard = $(this).closest('.section-card');
+            
+            // Don't remove if it's the last section
+            if ($('.section-card').length > 1) {
+                sectionCard.remove();
+                
+                // Renumber remaining sections
+                $('.section-card').each(function(index) {
+                    $(this).attr('data-section', index + 1);
+                    $(this).find('.card-header span').text(`Section ${index + 1}`);
+                });
+                
+                sectionCount = $('.section-card').length;
+            } else {
+                alert('You must have at least one section.');
+            }
+        });
+        
+        // Form submission
+        $('#blueprint-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            // Validate section percentages
+            let valid = true;
+            $('.section-card').each(function() {
+                const total = parseInt($(this).find('.total-percentage').text().replace('Total: ', '').replace('%', ''));
+                if (total !== 100) {
+                    valid = false;
+                    $(this).find('.card-header').addClass('bg-danger text-white');
+                    
+                    setTimeout(() => {
+                        $(this).find('.card-header').removeClass('bg-danger text-white');
+                    }, 2000);
+                }
+            });
+            
+            if (!valid) {
+                alert('Each section must have cognitive levels that total exactly 100%.');
+                return;
+            }
+            
+            // Collect form data
+            const subject = $('#subject').val() || 'Examination';
+            const totalMarks = $('#total-marks').val();
+            const timeHours = $('#time-hours').val();
+            
+            const sections = [];
+            $('.section-card').each(function() {
+                const sectionData = {
+                    name: $(this).find('.section-name').val(),
+                    description: $(this).find('.section-description').val(),
+                    question_count: parseInt($(this).find('.question-count').val()),
+                    marks_per_question: parseInt($(this).find('.marks-per-question').val()),
+                    cognitive_levels: {}
+                };
+                
+                // Get cognitive levels
+                $(this).find('.cognitive-level').each(function() {
+                    const level = $(this).data('level');
+                    const value = parseInt($(this).val()) / 100;
+                    if (value > 0) {
+                        sectionData.cognitive_levels[level] = value;
+                    }
+                });
+                
+                sections.push(sectionData);
+            });
+            
+            // Prepare data for API call
+            const formData = {
+                subject: subject,
+                total_marks: totalMarks,
+                time_hours: timeHours,
+                sections: sections
+            };
+            
+            // Show loader
+            $('#generate-btn').html('<i class="fas fa-spinner fa-spin"></i> Generating...').prop('disabled', true);
+            
+            // Send request to generate paper
+            $.ajax({
+                url: '/generate-question',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function(response) {
+                    // Reset button
+                    $('#generate-btn').html('<i class="fas fa-magic"></i> Generate Question Paper').prop('disabled', false);
+                    
+                    // Enable action buttons
+                    $('#print-btn, #export-btn').prop('disabled', false);
+                    
+                    // Display generated paper
+                    displayQuestionPaper(response.question_paper);
+                    
+                    // Show next steps
+                    $('#next-steps').removeClass('d-none');
+                },
+                error: function(xhr) {
+                    // Reset button
+                    $('#generate-btn').html('<i class="fas fa-magic"></i> Generate Question Paper').prop('disabled', false);
+                    
+                    // Show error
+                    alert('Error generating question paper: ' + 
+                          (xhr.responseJSON?.error || 'Unknown error occurred'));
+                }
+            });
+        });
+        
+        // Display generated question paper
+        function displayQuestionPaper(paper) {
+            // Update paper headers
+            $('#paper-title').text(paper.title);
+            $('#paper-date').text('Date: ' + paper.date);
+            $('#paper-details').text(`Total Marks: ${paper.total_marks} | Time: ${paper.time_hours} Hours`);
+            
+            // Clear sections
+            $('#paper-sections').empty();
+            
+            // Add sections
+            paper.sections.forEach(section => {
+                const sectionHTML = `
+                    <div class="paper-section mb-4">
+                        <h5 class="mb-2">${section.name}</h5>
+                        <p class="mb-3 text-muted fst-italic">${section.description}</p>
+                        
+                        <div class="questions">
+                            ${generateQuestionsHTML(section.questions)}
+                        </div>
+                    </div>
+                    <hr>
+                `;
+                
+                $('#paper-sections').append(sectionHTML);
+            });
+            
+            // Show question paper
+            $('#generated-paper-container').empty();
+            $('#question-paper').removeClass('d-none');
+            $('#generated-paper-container').append($('#question-paper'));
+        }
+        
+        // Generate HTML for questions
+        function generateQuestionsHTML(questions) {
+            let html = '';
+            
+            questions.forEach(question => {
+                const cognitiveClass = getCognitiveClass(question.cognitive_level);
+                
+                html += `
+                    <div class="question mb-3">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <span class="question-number fw-bold">${question.number}.</span>
+                                <span class="question-text">${question.text}</span>
+                            </div>
+                            <div>
+                                <span class="badge ${cognitiveClass} ms-2">${question.cognitive_level}</span>
+                                <span class="badge bg-secondary ms-2">${question.marks} marks</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            return html;
+        }
+        
+        // Get badge class for cognitive level
+        function getCognitiveClass(level) {
+            switch(level) {
+                case 'remember': return 'bg-info';
+                case 'understand': return 'bg-success';
+                case 'apply': return 'bg-primary';
+                case 'analyze': return 'bg-warning';
+                case 'evaluate': return 'bg-danger';
+                case 'create': return 'bg-dark';
+                default: return 'bg-secondary';
+            }
+        }
+        
+        // Print button functionality
+        $('#print-btn').on('click', function() {
+            const paperContent = $('#question-paper').html();
+            const printWindow = window.open('', '_blank');
+            
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${$('#paper-title').text()}</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+                    <style>
+                        body {
+                            padding: 20px;
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        }
+                        @media print {
+                            .no-print {
+                                display: none;
+                            }
+                            body {
+                                padding: 0;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="no-print text-end mb-3">
+                            <button class="btn btn-primary" onclick="window.print()">Print</button>
+                            <button class="btn btn-secondary ms-2" onclick="window.close()">Close</button>
+                        </div>
+                        ${paperContent}
+                    </div>
+                </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+        });
+        
+        // Export button functionality
+        $('#export-btn').on('click', function() {
+            // This would be more sophisticated in a real app with proper PDF generation
+            // For now, just offer a simple text export
+            
+            let exportText = `${$('#paper-title').text()}\n`;
+            exportText += `${$('#paper-date').text()}\n`;
+            exportText += `${$('#paper-details').text()}\n\n`;
+            
+            $('#paper-sections .paper-section').each(function() {
+                const sectionName = $(this).find('h5').text();
+                const sectionDesc = $(this).find('p').text();
+                
+                exportText += `${sectionName}\n`;
+                exportText += `${sectionDesc}\n\n`;
+                
+                $(this).find('.question').each(function() {
+                    const questionNum = $(this).find('.question-number').text();
+                    const questionText = $(this).find('.question-text').text();
+                    const marks = $(this).find('.badge.bg-secondary').text();
+                    
+                    exportText += `${questionNum} ${questionText} (${marks})\n`;
+                });
+                
+                exportText += '\n';
+            });
+            
+            // Create a blob and download link
+            const blob = new Blob([exportText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${$('#subject').val() || 'question_paper'}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    });
+</script>
+{% endblock %}
